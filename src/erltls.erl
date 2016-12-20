@@ -5,9 +5,6 @@
 
 %% todo: implement the following methods:
 %% versions/1
-%% stop/0
-%% start/1
-%% start/0
 %% ssl_accept/2
 %% ssl_accept/3
 %% shutdown/2
@@ -24,6 +21,9 @@
 %% close/2
 
 -export([
+    start/0,
+    start/1,
+    stop/0,
     cipher_suites/0,
     clear_pem_cache/0,
     connect/2,
@@ -45,6 +45,21 @@
     recv/3,
     close/1
 ]).
+
+
+start() ->
+    start(temporary).
+
+start(Type) ->
+    case application:ensure_all_started(erltls, Type) of
+        {ok, _} ->
+            ok;
+        Other ->
+            Other
+    end.
+
+stop() ->
+    application:stop(erltls).
 
 cipher_suites() ->
     case erltls_manager:get_ctx(null, null, null, null, false) of

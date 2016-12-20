@@ -29,11 +29,11 @@ get_certificate() ->
     <<"../../test/server.pem">>.
 
 init_per_suite(Config) ->
-    {ok,  _} = application:ensure_all_started(erltls),
+    ok = erltls:start(),
     Config.
 
 end_per_suite(_Config) ->
-    application:stop(erltls).
+    ok = erltls:stop().
 
 test_context(_Config) ->
     {error, missing_certificate} = erltls_manager:get_ctx(null, null, null, null),
