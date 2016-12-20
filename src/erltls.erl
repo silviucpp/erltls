@@ -12,6 +12,8 @@
     controlling_process/2,
     getopts/2,
     setopts/2,
+    getstat/1,
+    getstat/2,
     listen/2,
     transport_accept/1,
     transport_accept/2,
@@ -61,6 +63,12 @@ getopts(#tlssocket{tcp_sock = TcpSock}, OptionNames) ->
 
 setopts(#tlssocket{tcp_sock = TcpSock}, Options) ->
     inet:setopts(TcpSock, Options).
+
+getstat(#tlssocket{tcp_sock = TcpSock}) ->
+    inet:getstat(TcpSock).
+
+getstat(#tlssocket{tcp_sock = TcpSock}, Opt) ->
+    inet:getstat(TcpSock, Opt).
 
 listen(Port, Options) ->
     {TcpOpt, TlsOpt} = get_options(Options),

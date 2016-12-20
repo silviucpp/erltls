@@ -176,6 +176,8 @@ test_send_recv(_Config) ->
             throw(Error)
     end,
 
+    {ok, _} = erltls:getstat(Socket),
+    {ok, _} = erltls:getstat(Socket, [recv_cnt]),
     ok = erltls:close(Socket),
     true.
 
