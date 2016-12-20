@@ -1,0 +1,8 @@
+{application, erltls, [
+    {description, "TLS/SSL OpenSSL-based NIF for Erlang"},
+    {vsn, "1.0"},
+    {registered, []},
+    {applications, [kernel, stdlib]},
+    {mod, {erltls_app, []}},
+    {env, []}
+]}.

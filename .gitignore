@@ -1,0 +1,6 @@
+/.idea/
+/.rebar/
+/ebin/
+/erltls_nif.xcodeproj/
+/priv/
+*.DS_Store
