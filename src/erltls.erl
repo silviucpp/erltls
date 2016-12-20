@@ -3,6 +3,26 @@
 
 -include("erltls.hrl").
 
+%% todo: implement the following methods:
+%% versions/1
+%% stop/0
+%% start/1
+%% start/0
+%% ssl_accept/2
+%% ssl_accept/3
+%% shutdown/2
+%% renegotiate/1
+%% prf/5
+%% peercert/1
+%% negotiated_protocol/1
+%% format_error/1
+%% eccs/1
+%% eccs/0
+%% connection_information/1
+%% connection_information/2
+%% connect(Socket, SslOptions, Timeout)
+%% close/2
+
 -export([
     cipher_suites/0,
     clear_pem_cache/0,
