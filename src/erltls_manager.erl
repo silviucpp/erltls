@@ -5,7 +5,7 @@
 
 -export([start_link/0, init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
--export([get_ctx/4, clear_cache/0]).
+-export([get_ctx/4, get_ctx/5, clear_cache/0]).
 
 -define(SERVER, ?MODULE).
 -define(ETS_SSL_CONTEXT, etls_ssl_context_table).

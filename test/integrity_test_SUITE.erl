@@ -14,6 +14,7 @@ groups() -> [
     {erltls_group, [sequence], [
         test_context,
         test_clear_pem_cache,
+        test_cipher_suites,
         test_connect_complete,
         test_handshake_failed,
         test_owner_died,
@@ -47,6 +48,10 @@ test_clear_pem_cache(_Config) ->
     {ok, Ctx2} = erltls_manager:get_ctx(get_certificate(), ["AES128-GCM-SHA256"], null, null),
     Ctx1 =/= Ctx2,
     true.
+
+test_cipher_suites(_Config) ->
+    Ciphers = erltls:cipher_suites(),
+    is_list(Ciphers) andalso length(Ciphers) > 0.
 
 test_connect_complete(_Config) ->
     Opt = [

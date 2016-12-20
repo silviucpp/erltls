@@ -7,6 +7,7 @@
 
 -export([
     new_context/4,
+    ciphers/1,
     ssl_new/3,
     ssl_handshake/1,
     ssl_send_pending/1,
@@ -39,6 +40,9 @@ not_loaded(Line) ->
     erlang:nif_error({not_loaded, [{module, ?MODULE}, {line, Line}]}).
 
 new_context(_KeyFile, _Ciphers, _DhFile, _CaFile) ->
+    ?NOT_LOADED.
+
+ciphers(_Ctx) ->
     ?NOT_LOADED.
 
 ssl_new(_Context, _Role, _Flags) ->

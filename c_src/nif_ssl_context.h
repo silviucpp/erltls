@@ -8,6 +8,8 @@
 struct erltls_data;
 
 ERL_NIF_TERM enif_ssl_ctx_new(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+ERL_NIF_TERM enif_ciphers(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+
 void enif_ssl_ctx_free(ErlNifEnv* env, void* obj);
 
 SSL_CTX* get_context(ErlNifEnv* env, erltls_data* data, ERL_NIF_TERM term);

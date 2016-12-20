@@ -4,6 +4,7 @@
 -include("erltls.hrl").
 
 -export([
+    cipher_suites/0,
     clear_pem_cache/0,
     connect/2,
     connect/3,
@@ -20,6 +21,14 @@
     recv/3,
     close/1
 ]).
+
+cipher_suites() ->
+    case erltls_manager:get_ctx(null, null, null, null, false) of
+        {ok, Ctx} ->
+            erltls_nif:ciphers(Ctx);
+        _ ->
+            {error, <<"invalid ssl context">>}
+    end.
 
 clear_pem_cache() ->
     case erltls_manager:clear_cache() of

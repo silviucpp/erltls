@@ -52,6 +52,37 @@ ERL_NIF_TERM enif_ssl_ctx_new(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[
     return enif_make_tuple2(env, ATOMS.atomOk, term);
 }
 
+ERL_NIF_TERM enif_ciphers(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+    UNUSED(argc);
+
+    erltls_data* data = static_cast<erltls_data*>(enif_priv_data(env));
+
+    SSL_CTX* ctx = get_context(env, data, argv[0]);
+
+    if(!ctx)
+        return make_badarg(env);
+
+    std::unique_ptr<SSL, decltype(&SSL_free)>ssl (SSL_new(ctx), &SSL_free);
+
+    STACK_OF(SSL_CIPHER) *stack = SSL_get_ciphers(ssl.get());
+
+    if(!stack)
+        return enif_make_list(env, 0);
+
+    int ciphers_count = sk_SSL_CIPHER_num(stack);
+    ERL_NIF_TERM nif_items[ciphers_count];
+
+    for (int i = 0; i < ciphers_count; i++)
+    {
+        const char* cipher_name = SSL_CIPHER_get_name(sk_SSL_CIPHER_value (stack, i));
+        size_t cipher_length = strlen(cipher_name);
+        nif_items[i] = make_binary(env, reinterpret_cast<const uint8_t*>(cipher_name), cipher_length);
+    }
+
+    return enif_make_list_from_array(env, nif_items, static_cast<unsigned>(ciphers_count));
+}
+
 void enif_ssl_ctx_free(ErlNifEnv* env, void* obj)
 {
     UNUSED(env);
