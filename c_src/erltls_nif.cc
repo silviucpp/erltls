@@ -7,7 +7,6 @@
 
 const char kAtomOk[] = "ok";
 const char kAtomError[] = "error";
-const char kAtomSslWrite[] = "ssl_write";
 const char kAtomSllNotStarted[] = "ssl_not_started";
 const char kAtomBadArg[] = "badarg";
 
@@ -28,7 +27,6 @@ int on_nif_load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     
     ATOMS.atomOk = make_atom(env, kAtomOk);
     ATOMS.atomError = make_atom(env, kAtomError);
-    ATOMS.atomSslWrite = make_atom(env, kAtomSslWrite);
     ATOMS.atomSslNotStarted = make_atom(env, kAtomSllNotStarted);
     ATOMS.atomBadArg = make_atom(env, kAtomBadArg);
 

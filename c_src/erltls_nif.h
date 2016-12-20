@@ -8,7 +8,6 @@ struct atoms
     ERL_NIF_TERM atomOk;
     ERL_NIF_TERM atomError;
     ERL_NIF_TERM atomBadArg;
-    ERL_NIF_TERM atomSslWrite;
     ERL_NIF_TERM atomSslNotStarted;
 };
 

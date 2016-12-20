@@ -11,8 +11,7 @@
 static const int kTlsFrameSize = 16*1024;
 
 //@todo:
-//1. SendPendingAsync not implemented
-//2. DoReadOp should be optimised
+//1. DoReadOp should be optimised
 
 TlsSocket::TlsSocket() : bio_read_(NULL), bio_write_(NULL), ssl_(NULL)
 {
@@ -143,8 +142,6 @@ ERL_NIF_TERM TlsSocket::DoReadOp(ErlNifEnv *env)
         }
     }
     
-    SendPendingAsync(env);
-    
     return make_binary(env, buff.Data(), buff.Length());
 }
 
@@ -167,32 +164,4 @@ ERL_NIF_TERM TlsSocket::SendPending(ErlNifEnv *env)
     assert(read_bytes == pending);
     return term;
 }
-
-ERL_NIF_TERM TlsSocket::SendPendingAsync(ErlNifEnv *env)
-{
-    assert(ssl_);
-    
-    int pending = BIO_pending(bio_write_);
-    
-    if (!pending)
-        return ATOMS.atomOk;
-    
-    ERL_NIF_TERM term;
-    
-    std::unique_ptr<ErlNifEnv, decltype(&enif_free_env)> local_env(enif_alloc_env(), &enif_free_env);
-    unsigned char *destination_buffer = enif_make_new_binary(local_env.get(), pending, &term);
-    int read_bytes = BIO_read(bio_write_, destination_buffer, pending);
-    assert(read_bytes == pending);
-    
-    ErlNifPid pid;
-    
-    if(enif_self(env, &pid) == NULL)
-        return make_error(env, "failed to get the self pid");
-    
-    if(!enif_send(env, &pid, local_env.get(), enif_make_tuple(local_env.get(), 2 , ATOMS.atomSslWrite, term)))
-        return make_error(env, "enif_send failed");
-    
-    return ATOMS.atomOk;
-}
-
 
