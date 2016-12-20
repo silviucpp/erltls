@@ -46,8 +46,7 @@ test_clear_pem_cache(_Config) ->
     {ok, Ctx1} = erltls_manager:get_ctx(get_certificate(), ["AES128-GCM-SHA256"], null, null),
     ok = erltls:clear_pem_cache(),
     {ok, Ctx2} = erltls_manager:get_ctx(get_certificate(), ["AES128-GCM-SHA256"], null, null),
-    Ctx1 =/= Ctx2,
-    true.
+    Ctx1 =/= Ctx2.
 
 test_cipher_suites(_Config) ->
     Ciphers = erltls:cipher_suites(),
@@ -177,6 +176,7 @@ test_send_recv(_Config) ->
     end,
 
     {ok, {_Add, _Port}} = erltls:peername(Socket),
+    {ok, {_Add2, _Port2}} = erltls:sockname(Socket),
     {ok, _} = erltls:getstat(Socket),
     {ok, _} = erltls:getstat(Socket, [recv_cnt]),
     ok = erltls:close(Socket),

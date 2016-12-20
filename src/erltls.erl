@@ -15,6 +15,7 @@
     getstat/1,
     getstat/2,
     peername/1,
+    sockname/1,
     listen/2,
     transport_accept/1,
     transport_accept/2,
@@ -73,6 +74,9 @@ getstat(#tlssocket{tcp_sock = TcpSock}, Opt) ->
 
 peername(#tlssocket{tcp_sock = TcpSock}) ->
     inet:peername(TcpSock).
+
+sockname(#tlssocket{tcp_sock = TcpSock}) ->
+    inet:sockname(TcpSock).
 
 listen(Port, Options) ->
     {TcpOpt, TlsOpt} = get_options(Options),
