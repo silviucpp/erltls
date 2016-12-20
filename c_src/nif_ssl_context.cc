@@ -4,6 +4,9 @@
 #include "nif_utils.h"
 #include "macros.h"
 
+static const char kErrorFailedToCreateContext[]    = "failed to create context";
+static const char kErrorFailedToAllocNifContext[]  = "failed to alloc enif_ssl_ctx";
+
 struct enif_ssl_ctx
 {
     SSL_CTX* ctx;
@@ -33,14 +36,14 @@ ERL_NIF_TERM enif_ssl_ctx_new(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[
     SSL_CTX* ctx = TlsManager::CreateContext(key_file_buff, ciphers_buff, dh_file_buff, ca_file_buff);
     
     if(!ctx)
-        return make_error(env, "failed to create context");
+        return make_error(env, kErrorFailedToCreateContext);
     
     enif_ssl_ctx *nif_ctx = static_cast<enif_ssl_ctx*>(enif_alloc_resource(data->res_ssl_ctx, sizeof(enif_ssl_ctx)));
     
     if(nif_ctx == NULL)
     {
         SSL_CTX_free(ctx);
-        return make_error(env, "failed to alloc enif_ssl_ctx");
+        return make_error(env, kErrorFailedToAllocNifContext);
     }
     
     nif_ctx->ctx = ctx;

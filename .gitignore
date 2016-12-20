@@ -4,3 +4,4 @@
 /erltls_nif.xcodeproj/
 /priv/
 *.DS_Store
+/log/

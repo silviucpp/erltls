@@ -6,6 +6,9 @@
 
 static const char kDefaultCiphers[] = "DEFAULT:!EXPORT:!LOW:!RC4:!SSLv2";
 
+//@todo:
+//1. implement verify callback
+
 void TlsManager::InitOpenSSL()
 {
 #ifndef OPENSSL_IS_BORINGSSL
@@ -71,7 +74,6 @@ SSL_CTX* TlsManager::CreateContext(const char* key_file, const char* ciphers, co
 #endif
     
     SSL_CTX_set_verify(ctx.get(), SSL_VERIFY_PEER|SSL_VERIFY_CLIENT_ONCE, VerifyCallback);
-    //SSL_CTX_set_info_callback(ctx.get(), &ssl_info_callback);
     
     return ctx.release();
 }

@@ -5,6 +5,10 @@
 #include "macros.h"
 #include "nif_utils.h"
 
+static const char kErrorFailedToAllocNifSocket[] = "failed to alloc enif_ssl_socket";
+static const char kErrorFailedToAllocSslSocket[] = "failed to alloc ssl socket";
+static const char kErrorFailedToInitSslSocket[]  = "failed to init ssl socket";
+
 struct enif_ssl_socket
 {
     TlsSocket* socket;
@@ -21,26 +25,26 @@ ERL_NIF_TERM enif_ssl_socket_new(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
     SSL_CTX* ctx = get_context(env, data, argv[0]);
     
     if(!ctx)
-        return make_error(env, "failed to get context");
+        return make_badarg(env);
 
     if(!enif_get_int(env, argv[1], &role))
-        return make_error(env, "failed to get ssl role");
+        return make_badarg(env);
     
     if(!enif_get_long(env, argv[2], &flags))
-        return make_error(env, "failed to get flags");
+        return make_badarg(env);
     
     std::unique_ptr<enif_ssl_socket, decltype(&enif_release_resource)> nif_socket(static_cast<enif_ssl_socket*>(enif_alloc_resource(data->res_ssl_sock, sizeof(enif_ssl_socket))), &enif_release_resource);
     
     if(nif_socket.get() == NULL)
-        return make_error(env, "failed to alloc enif_ssl_socket");
+        return make_error(env, kErrorFailedToAllocNifSocket);
     
     TlsSocket* socket = new TlsSocket();
     
     if(socket == NULL)
-        return make_error(env, "failed to alloc ssl socket");
+        return make_error(env, kErrorFailedToAllocSslSocket);
     
     if(!socket->Init(ctx, static_cast<TlsSocket::kSslRole>(role), flags))
-        return make_error(env, "failed to init ssl socket");
+        return make_error(env, kErrorFailedToInitSslSocket);
     
     nif_socket->socket = socket;
     
@@ -67,7 +71,7 @@ ERL_NIF_TERM enif_ssl_socket_handshake(ErlNifEnv* env, int argc, const ERL_NIF_T
     enif_ssl_socket* wp = NULL;
     
     if(!enif_get_resource(env, argv[0], data->res_ssl_sock, (void**) &wp))
-        return make_error(env, "failed to get socket");
+        return make_badarg(env);
         
     return wp->socket->Handshake(env);
 }
@@ -81,7 +85,7 @@ ERL_NIF_TERM enif_ssl_socket_send_pending(ErlNifEnv* env, int argc, const ERL_NI
     enif_ssl_socket* wp = NULL;
     
     if(!enif_get_resource(env, argv[0], data->res_ssl_sock, (void**) &wp))
-        return make_error(env, "failed to get socket");
+        return make_badarg(env);
     
     return wp->socket->SendPending(env);
 }
@@ -96,10 +100,10 @@ ERL_NIF_TERM enif_ssl_socket_feed_data(ErlNifEnv* env, int argc, const ERL_NIF_T
     ErlNifBinary bin;
     
     if(!enif_get_resource(env, argv[0], data->res_ssl_sock, (void**) &wp))
-        return make_error(env, "failed to get socket");
+        return make_badarg(env);
     
-    if(!get_bstring(env, argv[1], &bin))
-        return make_error(env, "failed to get binary data");
+    if(!get_binary(env, argv[1], &bin))
+        return make_badarg(env);
     
     return wp->socket->FeedData(env, &bin);
 }
@@ -114,10 +118,10 @@ ERL_NIF_TERM enif_ssl_socket_send_data(ErlNifEnv* env, int argc, const ERL_NIF_T
     ErlNifBinary bin;
     
     if(!enif_get_resource(env, argv[0], data->res_ssl_sock, (void**) &wp))
-        return make_error(env, "failed to get socket");
+        return make_badarg(env);
     
-    if(!get_bstring(env, argv[1], &bin))
-        return make_error(env, "failed to get binary data");
+    if(!get_binary(env, argv[1], &bin))
+        return make_badarg(env);
     
     return wp->socket->SendData(env, &bin);
 }
@@ -130,7 +134,7 @@ ERL_NIF_TERM enif_ssl_socket_shutdown(ErlNifEnv* env, int argc, const ERL_NIF_TE
     enif_ssl_socket* wp = NULL;
     
     if(!enif_get_resource(env, argv[0], data->res_ssl_sock, (void**) &wp))
-        return make_error(env, "failed to get socket");
+        return make_badarg(env);
     
     return wp->socket->Shutdown(env);
 }

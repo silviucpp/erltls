@@ -7,15 +7,14 @@
 #include <cassert>
 
 //http://roxlu.com/2014/042/using-openssl-with-memory-bios
-//https://github.com/deleisha/evt-tls/blob/master/evt_tls.c
-//https://github.com/deleisha/evt-tls/blob/master/evt_tls.h
 
-const int kTlsFrameSize = 16*1024;
+static const int kTlsFrameSize = 16*1024;
 
-TlsSocket::TlsSocket() :
-    bio_read_(NULL),
-    bio_write_(NULL),
-    ssl_(NULL)
+//@todo:
+//1. SendPendingAsync not implemented
+//2. DoReadOp should be optimised
+
+TlsSocket::TlsSocket() : bio_read_(NULL), bio_write_(NULL), ssl_(NULL)
 {
     
 }
@@ -100,7 +99,7 @@ ERL_NIF_TERM TlsSocket::SendData(ErlNifEnv *env, const ErlNifBinary* bin)
 {
     assert(ssl_);
     assert(bin->size > 0);
-    
+
     int ret = SSL_write(ssl_, bin->data, static_cast<int>(bin->size));
     assert(ret > 0);
     return SendPending(env);
@@ -112,7 +111,7 @@ ERL_NIF_TERM TlsSocket::Handshake(ErlNifEnv *env)
         return make_error(env, ATOMS.atomSslNotStarted);
     
     if(SSL_is_init_finished(ssl_))
-        return make_ok_result(env, enif_make_int(env,1));
+        return make_ok_result(env, enif_make_int(env, 1));
     
     int result = SSL_do_handshake(ssl_);
 
@@ -165,9 +164,7 @@ ERL_NIF_TERM TlsSocket::SendPending(ErlNifEnv *env)
     
     unsigned char *destination_buffer = enif_make_new_binary(env, pending, &term);
     int read_bytes = BIO_read(bio_write_, destination_buffer, pending);
-    
     assert(read_bytes == pending);
-    
     return term;
 }
 

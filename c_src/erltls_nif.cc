@@ -1,16 +1,15 @@
 #include "erltls_nif.h"
 #include "nif_utils.h"
+#include "macros.h"
 #include "nif_ssl_context.h"
 #include "nif_ssl_socket.h"
 #include "tlsmanager.h"
-#include "macros.h"
 
 const char kAtomOk[] = "ok";
 const char kAtomError[] = "error";
-const char kAtomTrue[] = "true";
-const char kAtomFalse[] = "false";
 const char kAtomSslWrite[] = "ssl_write";
 const char kAtomSllNotStarted[] = "ssl_not_started";
+const char kAtomBadArg[] = "badarg";
 
 atoms ATOMS;
 
@@ -29,10 +28,9 @@ int on_nif_load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     
     ATOMS.atomOk = make_atom(env, kAtomOk);
     ATOMS.atomError = make_atom(env, kAtomError);
-    ATOMS.atomTrue = make_atom(env, kAtomTrue);
-    ATOMS.atomFalse = make_atom(env, kAtomFalse);
     ATOMS.atomSslWrite = make_atom(env, kAtomSslWrite);
     ATOMS.atomSslNotStarted = make_atom(env, kAtomSllNotStarted);
+    ATOMS.atomBadArg = make_atom(env, kAtomBadArg);
 
     erltls_data* data = static_cast<erltls_data*>(enif_alloc(sizeof(erltls_data)));
     open_resources(env, data);

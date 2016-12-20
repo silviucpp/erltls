@@ -3,7 +3,6 @@
 
 #include <string.h>
 
-
 ERL_NIF_TERM make_atom(ErlNifEnv* env, const char* name)
 {
     ERL_NIF_TERM ret;
@@ -32,12 +31,17 @@ ERL_NIF_TERM make_error(ErlNifEnv* env, ERL_NIF_TERM term)
     return enif_make_tuple2(env, ATOMS.atomError, term);
 }
 
+ERL_NIF_TERM make_badarg(ErlNifEnv* env)
+{
+    return enif_make_tuple2(env, ATOMS.atomError, ATOMS.atomBadArg);
+}
+
 ERL_NIF_TERM make_ok_result(ErlNifEnv* env, ERL_NIF_TERM term)
 {
     return enif_make_tuple(env, 2, ATOMS.atomOk, term);
 }
 
-bool get_bstring(ErlNifEnv* env, ERL_NIF_TERM term, ErlNifBinary* bin)
+bool get_binary(ErlNifEnv* env, ERL_NIF_TERM term, ErlNifBinary* bin)
 {
     if(enif_is_binary(env, term))
         return enif_inspect_binary(env, term, bin);
@@ -48,16 +52,12 @@ bool get_bstring(ErlNifEnv* env, ERL_NIF_TERM term, ErlNifBinary* bin)
 bool get_string(ErlNifEnv *env, ERL_NIF_TERM term, std::string* var)
 {
     ErlNifBinary bin;
-    int ret;
     
-    if(enif_is_binary(env, term))
-        ret = enif_inspect_binary(env, term, &bin);
-    else
-        ret = enif_inspect_iolist_as_binary(env, term, &bin);
+    if(get_binary(env, term, &bin))
+    {
+        *var = std::string(reinterpret_cast<const char*>(bin.data), bin.size);
+        return true;
+    }
     
-    if(!ret)
-        return false;
-    
-    *var = std::string(reinterpret_cast<const char*>(bin.data), bin.size);
-    return true;
+    return false;
 }
