@@ -3,10 +3,9 @@
 
 -include("erltls.hrl").
 
-%% todo: implement the following methods:
+%% todo:
+%% 1. implement the following methods:
 %% versions/1
-%% ssl_accept/2
-%% ssl_accept/3
 %% shutdown/2
 %% renegotiate/1
 %% prf/5
@@ -17,8 +16,11 @@
 %% eccs/0
 %% connection_information/1
 %% connection_information/2
-%% connect(Socket, SslOptions, Timeout)
 %% close/2
+%% 2. In handshake process add a timeout param (affects connect and ssl_accept methods)
+%% 3. Allow setting additional ssl options in ssl_accept
+%% 4. write a test for upgrading from tcp to tls
+%% 5. write a test for downgrading from tls to tcp
 
 -export([
     start/0,
@@ -40,6 +42,8 @@
     transport_accept/1,
     transport_accept/2,
     ssl_accept/1,
+    ssl_accept/2,
+    ssl_accept/3,
     send/2,
     recv/2,
     recv/3,
@@ -77,9 +81,11 @@ clear_pem_cache() ->
             {error, Error}
     end.
 
-connect(Socket, SslOptions) when is_port(Socket) ->
-    erltls_ssl_process:new(Socket, SslOptions, ?SSL_ROLE_CLIENT).
+connect(Socket, SslOptions) ->
+    connect(Socket, SslOptions, infinity).
 
+connect(Socket, SslOptions, _Timeout) when is_port(Socket) ->
+    erltls_ssl_process:new(Socket, SslOptions, ?SSL_ROLE_CLIENT);
 connect(Host, Port, Options) ->
     connect(Host, Port, Options, infinity).
 
@@ -139,6 +145,26 @@ transport_accept(#tlssocket{tcp_sock = TcpSock, tls_opt = TlsOpt}, Timeout) ->
     end.
 
 ssl_accept(#tlssocket{tcp_sock = TcpSock, ssl_pid = Pid}) ->
+    erltls_ssl_process:handshake(Pid, TcpSock).
+
+ssl_accept(Socket, SslOptions) when is_list(SslOptions)->
+    ssl_accept(Socket);
+ssl_accept(Socket, _Timeout)  ->
+    ssl_accept(Socket).
+
+ssl_accept(Socket, SslOptions, _Timeout) when is_port(Socket) ->
+    case erltls_ssl_process:new(Socket, SslOptions, ?SSL_ROLE_SERVER) of
+        {ok, SslSocket} ->
+            case erltls_ssl_process:handshake(SslSocket#tlssocket.ssl_pid, Socket) of
+                ok ->
+                    {ok, SslSocket};
+                Error ->
+                    Error
+            end;
+        Error ->
+            Error
+    end;
+ssl_accept(#tlssocket{tcp_sock = TcpSock, ssl_pid = Pid}, _SslOptions, _Timeout) ->
     erltls_ssl_process:handshake(Pid, TcpSock).
 
 send(#tlssocket{ssl_pid = Pid, tcp_sock = TcpSocket}, Data) ->
