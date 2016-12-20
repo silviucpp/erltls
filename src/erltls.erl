@@ -4,6 +4,7 @@
 -include("erltls.hrl").
 
 -export([
+    clear_pem_cache/0,
     connect/2,
     connect/3,
     connect/4,
@@ -19,6 +20,14 @@
     recv/3,
     close/1
 ]).
+
+clear_pem_cache() ->
+    case erltls_manager:clear_cache() of
+        true ->
+            ok;
+        Error ->
+            {error, Error}
+    end.
 
 connect(Socket, SslOptions) when is_port(Socket) ->
     erltls_ssl_process:new(Socket, SslOptions, ?SSL_ROLE_CLIENT).

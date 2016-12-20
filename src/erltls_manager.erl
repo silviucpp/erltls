@@ -4,7 +4,8 @@
 -behaviour(gen_server).
 
 -export([start_link/0, init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
--export([get_ctx/4]).
+
+-export([get_ctx/4, clear_cache/0]).
 
 -define(SERVER, ?MODULE).
 -define(ETS_SSL_CONTEXT, etls_ssl_context_table).
@@ -23,6 +24,9 @@ get_ctx(KeyFile, Ciphers, DhFile, CaFile) ->
             {ok, Context}
     end.
 
+clear_cache() ->
+    gen_server:call(?MODULE, clear_cache).
+
 init([]) ->
     ?ETS_SSL_CONTEXT = ets:new(?ETS_SSL_CONTEXT, [set, named_table, protected, {read_concurrency, true}]),
     {ok, #state{}}.
@@ -40,7 +44,11 @@ handle_call({get_context, CtxKey, KeyFile, Ciphers, DhFile, CaFile}, _From, Stat
         Context ->
             {ok, Context}
     end,
-    {reply, Result, State}.
+    {reply, Result, State};
+
+handle_call(clear_cache, _From, State) ->
+    Rs = ets:delete_all_objects(?ETS_SSL_CONTEXT),
+    {reply, Rs, State}.
 
 handle_cast(_Request, State) ->
     {noreply, State}.
