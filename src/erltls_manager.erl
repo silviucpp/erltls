@@ -15,13 +15,21 @@
 start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
-get_ctx(KeyFile, Ciphers, DhFile, CaFile) ->
-    CtxKey = get_ctx_Key(KeyFile, Ciphers, DhFile, CaFile),
-    case ets_get(CtxKey) of
-        null ->
-            gen_server:call(?MODULE, {get_context, CtxKey, KeyFile, Ciphers, DhFile, CaFile});
-        Context ->
-            {ok, Context}
+get_ctx(CertFile, Ciphers, DhFile, CaFile) ->
+    get_ctx(CertFile, Ciphers, DhFile, CaFile, true).
+
+get_ctx(CertFile, Ciphers, DhFile, CaFile, MandatoryCertificate) ->
+    case missing_cert(CertFile, MandatoryCertificate) of
+        true ->
+            {error, missing_certificate};
+        _ ->
+            CtxKey = get_ctx_Key(CertFile, Ciphers, DhFile, CaFile),
+            case ets_get(CtxKey) of
+                null ->
+                    gen_server:call(?MODULE, {get_context, CtxKey, CertFile, Ciphers, DhFile, CaFile});
+                Context ->
+                    {ok, Context}
+            end
     end.
 
 clear_cache() ->
@@ -31,10 +39,10 @@ init([]) ->
     ?ETS_SSL_CONTEXT = ets:new(?ETS_SSL_CONTEXT, [set, named_table, protected, {read_concurrency, true}]),
     {ok, #state{}}.
 
-handle_call({get_context, CtxKey, KeyFile, Ciphers, DhFile, CaFile}, _From, State) ->
+handle_call({get_context, CtxKey, CertFile, Ciphers, DhFile, CaFile}, _From, State) ->
     Result = case ets_get(CtxKey) of
         null ->
-            case erltls_nif:new_context(KeyFile, Ciphers, DhFile, CaFile) of
+            case erltls_nif:new_context(CertFile, Ciphers, DhFile, CaFile) of
                 {ok, Context} ->
                     true = ets_set(CtxKey, Context),
                     {ok, Context};
@@ -75,9 +83,18 @@ ets_get(Identifier) ->
             null
     end.
 
-get_ctx_Key(KeyFile, Ciphers, DhFile, CaFile) ->
-    KeyFileBin = erltls_utils:to_bin(KeyFile),
+get_ctx_Key(CertFile, Ciphers, DhFile, CaFile) ->
+    CertFileBin = erltls_utils:to_bin(CertFile),
     CiphersBin = erltls_utils:to_bin(Ciphers),
     DhFileBin = erltls_utils:to_bin(DhFile),
     CaFileBin = erltls_utils:to_bin(CaFile),
-    <<KeyFileBin/binary, "-", CiphersBin/binary, "-", DhFileBin/binary, "-", CaFileBin/binary>>.
+    <<CertFileBin/binary, "-", CiphersBin/binary, "-", DhFileBin/binary, "-", CaFileBin/binary>>.
+
+missing_cert(_, false) ->
+    false;
+missing_cert(Cert, true) when is_list(Cert) ->
+    length(Cert) =:= 0;
+missing_cert(Cert, true) when is_binary(Cert) ->
+    byte_size(Cert) =:= 0;
+missing_cert(_, true) ->
+    true.

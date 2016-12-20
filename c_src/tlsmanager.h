@@ -11,7 +11,7 @@ public:
     
     static void InitOpenSSL();
     static void CleanupOpenSSL();
-    static SSL_CTX* CreateContext(const char* key_file, const char* ciphers, const char* dh_file, const char* ca_file);
+    static SSL_CTX* CreateContext(const char* cert_file, const char* ciphers, const char* dh_file, const char* ca_file);
     static int VerifyCallback(int preverify_ok, X509_STORE_CTX* ctx);
     
 private:

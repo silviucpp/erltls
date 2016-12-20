@@ -35,7 +35,7 @@ end_per_suite(_Config) ->
     application:stop(erltls).
 
 test_context(_Config) ->
-    {error,<<"failed to create context">>} = erltls_manager:get_ctx(null, null, null, null),
+    {error, missing_certificate} = erltls_manager:get_ctx(null, null, null, null),
     {ok, Ctx1} = erltls_manager:get_ctx(get_certificate(), null, null, null),
     {ok, Ctx2} = erltls_manager:get_ctx(get_certificate(), null, null, null),
     {ok, _} = erltls_manager:get_ctx(get_certificate(), ["AES128-GCM-SHA256"], null, null),

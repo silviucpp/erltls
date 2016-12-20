@@ -34,22 +34,25 @@ int TlsManager::VerifyCallback(int preverify_ok, X509_STORE_CTX* ctx)
     return 1;
 }
 
-SSL_CTX* TlsManager::CreateContext(const char* key_file, const char* ciphers, const char* dh_file, const char* ca_file)
+SSL_CTX* TlsManager::CreateContext(const char* cert_file, const char* ciphers, const char* dh_file, const char* ca_file)
 {
     std::unique_ptr<SSL_CTX, decltype(&SSL_CTX_free)> ctx (SSL_CTX_new(SSLv23_method()), &SSL_CTX_free);
     
     if(!ctx.get())
         return NULL;
     
-    if(!SSL_CTX_use_certificate_chain_file(ctx.get(), key_file))
-        return NULL;
+    if(cert_file)
+    {
+        if(!SSL_CTX_use_certificate_chain_file(ctx.get(), cert_file))
+            return NULL;
     
-    if(!SSL_CTX_use_PrivateKey_file(ctx.get(), key_file, SSL_FILETYPE_PEM))
-        return NULL;
+        if(!SSL_CTX_use_PrivateKey_file(ctx.get(), cert_file, SSL_FILETYPE_PEM))
+            return NULL;
     
-    if(!SSL_CTX_check_private_key(ctx.get()))
-        return NULL;
-    
+        if(!SSL_CTX_check_private_key(ctx.get()))
+            return NULL;
+    }
+
     if(!SSL_CTX_set_cipher_list(ctx.get(), ciphers ? ciphers : kDefaultCiphers))
         return NULL;
     

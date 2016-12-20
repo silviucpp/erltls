@@ -18,22 +18,22 @@ ERL_NIF_TERM enif_ssl_ctx_new(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[
     
     erltls_data* data = static_cast<erltls_data*>(enif_priv_data(env));
     
-    std::string key_file;
+    std::string cert_file;
     std::string ciphers;
     std::string dh_file;
     std::string ca_file;
 
-    bool has_key_file = get_string(env, argv[0], &key_file);
+    bool has_cert_file = get_string(env, argv[0], &cert_file);
     bool has_ciphers = get_string(env, argv[1], &ciphers);
     bool has_dh_file = get_string(env, argv[2], &dh_file);
     bool has_ca_file = get_string(env, argv[3], &ca_file);
     
-    const char* key_file_buff = has_key_file ? key_file.c_str() : NULL;
+    const char* cert_file_buff = has_cert_file ? cert_file.c_str() : NULL;
     const char* ciphers_buff = has_ciphers ? ciphers.c_str() : NULL;
     const char* dh_file_buff = has_dh_file ? dh_file.c_str() : NULL;
     const char* ca_file_buff = has_ca_file ? ca_file.c_str() : NULL;
     
-    SSL_CTX* ctx = TlsManager::CreateContext(key_file_buff, ciphers_buff, dh_file_buff, ca_file_buff);
+    SSL_CTX* ctx = TlsManager::CreateContext(cert_file_buff, ciphers_buff, dh_file_buff, ca_file_buff);
     
     if(!ctx)
         return make_error(env, kErrorFailedToCreateContext);
