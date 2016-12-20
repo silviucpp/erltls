@@ -176,6 +176,7 @@ test_send_recv(_Config) ->
             throw(Error)
     end,
 
+    {ok, {_Add, _Port}} = erltls:peername(Socket),
     {ok, _} = erltls:getstat(Socket),
     {ok, _} = erltls:getstat(Socket, [recv_cnt]),
     ok = erltls:close(Socket),
