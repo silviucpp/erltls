@@ -4,6 +4,8 @@
 #include "nif_utils.h"
 #include "macros.h"
 
+#include <memory>
+
 static const char kErrorFailedToCreateContext[]    = "failed to create context";
 static const char kErrorFailedToAllocNifContext[]  = "failed to alloc enif_ssl_ctx";
 

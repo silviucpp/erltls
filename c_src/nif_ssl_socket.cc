@@ -5,6 +5,8 @@
 #include "macros.h"
 #include "nif_utils.h"
 
+#include <memory>
+
 static const char kErrorFailedToAllocNifSocket[] = "failed to alloc enif_ssl_socket";
 static const char kErrorFailedToAllocSslSocket[] = "failed to alloc ssl socket";
 static const char kErrorFailedToInitSslSocket[]  = "failed to init ssl socket";

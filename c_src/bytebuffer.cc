@@ -1,6 +1,7 @@
 #include "bytebuffer.h"
 #include "erl_nif.h"
 
+#include <string.h>
 #include <algorithm>
 
 ByteBuffer::ByteBuffer(size_t size)
