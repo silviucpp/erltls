@@ -63,7 +63,7 @@ ERL_NIF_TERM enif_ciphers(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     if(!ctx)
         return make_badarg(env);
 
-    std::unique_ptr<SSL, decltype(&SSL_free)>ssl (SSL_new(ctx), &SSL_free);
+    scoped_ptr(ssl, SSL, SSL_new(ctx), SSL_free);
 
     STACK_OF(SSL_CIPHER) *stack = SSL_get_ciphers(ssl.get());
 

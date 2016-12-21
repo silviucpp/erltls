@@ -1,5 +1,5 @@
 #include "ssldh.h"
-
+#include "macros.h"
 #include <memory>
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined LIBRESSL_VERSION_NUMBER
@@ -49,11 +49,11 @@ static unsigned char dh1024_g[] = {
 
 int SetupDH(SSL_CTX* ctx, const char* dh_file)
 {
-    std::unique_ptr<DH, decltype(&DH_free)> dh(NULL, &DH_free);
+    scoped_ptr(dh, DH, NULL, DH_free);
     
     if (dh_file != NULL)
     {
-        std::unique_ptr<BIO, decltype(&BIO_free)> bio(BIO_new_file(dh_file, "r"), &BIO_free);
+        scoped_ptr(bio, BIO, BIO_new_file(dh_file, "r"), BIO_free);
         
         if (bio.get())
             dh.reset(PEM_read_bio_DHparams(bio.get(), NULL, NULL, NULL));

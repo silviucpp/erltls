@@ -14,6 +14,11 @@ struct enif_ssl_socket
     TlsSocket* socket;
 };
 
+enif_ssl_socket* new_nif_socket(ErlNifResourceType* res)
+{
+    return static_cast<enif_ssl_socket*>(enif_alloc_resource(res, sizeof(enif_ssl_socket)));
+}
+
 ERL_NIF_TERM enif_ssl_socket_new(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     UNUSED(argc);
@@ -33,7 +38,7 @@ ERL_NIF_TERM enif_ssl_socket_new(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
     if(!enif_get_long(env, argv[2], &flags))
         return make_badarg(env);
     
-    std::unique_ptr<enif_ssl_socket, decltype(&enif_release_resource)> nif_socket(static_cast<enif_ssl_socket*>(enif_alloc_resource(data->res_ssl_sock, sizeof(enif_ssl_socket))), &enif_release_resource);
+    scoped_ptr(nif_socket, enif_ssl_socket, new_nif_socket(data->res_ssl_sock), enif_release_resource);
     
     if(nif_socket.get() == NULL)
         return make_error(env, kErrorFailedToAllocNifSocket);

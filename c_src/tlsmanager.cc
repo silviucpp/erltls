@@ -36,7 +36,7 @@ int TlsManager::VerifyCallback(int preverify_ok, X509_STORE_CTX* ctx)
 
 SSL_CTX* TlsManager::CreateContext(const char* cert_file, const char* ciphers, const char* dh_file, const char* ca_file)
 {
-    std::unique_ptr<SSL_CTX, decltype(&SSL_CTX_free)> ctx (SSL_CTX_new(SSLv23_method()), &SSL_CTX_free);
+    scoped_ptr(ctx, SSL_CTX, SSL_CTX_new(SSLv23_method()), SSL_CTX_free);
     
     if(!ctx.get())
         return NULL;
