@@ -76,11 +76,19 @@ handle_call({handshake, TcpSocket}, _From, #state{tls_ref = TlsSock} = State) ->
         true ->
             {reply, {error, <<"handshake already completed">>}, State};
         _ ->
-            case do_handshake(TcpSocket, TlsSock) of
-                ok ->
-                    {reply, ok, State#state{hk_completed = true}};
+            case inet:getopts(TcpSocket, [active]) of
+                {ok, [{active, CurrentMode}]} ->
+                    change_active(TcpSocket, CurrentMode, false),
+                    case do_handshake(TcpSocket, TlsSock) of
+                        ok ->
+                            change_active(TcpSocket, CurrentMode, false),
+                            {reply, ok, State#state{hk_completed = true}};
+                        Error ->
+                            change_active(TcpSocket, CurrentMode, false),
+                            {reply, Error, State}
+                    end;
                 Error ->
-                    {reply, Error, State}
+                    Error
             end
     end;
 
