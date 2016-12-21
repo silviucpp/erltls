@@ -4,6 +4,27 @@
 
 -record(tlssocket, {tcp_sock, ssl_pid, tls_opt = undefined}).
 
+-type tls_option()::
+    {verify, verify_type()} |
+    {compression, compression_type()} |
+    {certfile, path()} |
+    {cacerts, [Der::binary()]} |
+    {dhfile, path()} |
+    {ciphers, ciphers()}.
+
+-type tlssocket()                :: #tlssocket{}.
+-type socket_connect_option()    :: gen_tcp:connect_option().
+-type socket_listen_option()     :: gen_tcp:listen_option().
+-type connect_option()           :: socket_connect_option() | tls_option().
+-type listen_option()            :: socket_listen_option() | tls_option().
+
+-type reason()                   :: term().
+-type host()		             :: inet:ip_address() | inet:hostname().
+-type path()                     :: string().
+-type ciphers()                  :: [string()].
+-type verify_type()              :: verify_none | verify_peer.
+-type compression_type()         :: compression_none.
+
 %ssl stuffs
 
 -define(SSL_ROLE_SERVER, 1).

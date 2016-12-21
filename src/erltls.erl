@@ -50,9 +50,12 @@
     close/1
 ]).
 
+-spec start() -> ok  | {error, reason()}.
 
 start() ->
     start(temporary).
+
+-spec start(permanent | transient | temporary) -> ok | {error, reason()}.
 
 start(Type) ->
     case application:ensure_all_started(erltls, Type) of
@@ -61,6 +64,8 @@ start(Type) ->
         Other ->
             Other
     end.
+
+-spec stop() -> ok.
 
 stop() ->
     application:stop(erltls).
@@ -81,13 +86,22 @@ clear_pem_cache() ->
             {error, Error}
     end.
 
+-spec connect(port(), [connect_option()]) ->
+    {ok, tlssocket()} | {error, reason()}.
+
 connect(Socket, SslOptions) ->
     connect(Socket, SslOptions, infinity).
+
+-spec connect(port() | host(), [connect_option()] | inet:port_number(), timeout() | list()) ->
+    {ok, tlssocket()} | {error, reason()}.
 
 connect(Socket, SslOptions, _Timeout) when is_port(Socket) ->
     erltls_ssl_process:new(Socket, SslOptions, ?SSL_ROLE_CLIENT);
 connect(Host, Port, Options) ->
     connect(Host, Port, Options, infinity).
+
+-spec connect(host(), inet:port_number(), [connect_option()], timeout()) ->
+    {ok, tlssocket()} | {error, reason()}.
 
 connect(Host, Port, Options, Timeout) ->
     {TcpOpt, TlsOpt} = get_options(Options),
@@ -98,26 +112,50 @@ connect(Host, Port, Options, Timeout) ->
             Error
     end.
 
+-spec controlling_process(tlssocket(), pid()) ->
+    ok | {error, reason()}.
+
 controlling_process(#tlssocket{ssl_pid = Pid}, NewOwner) ->
     erltls_ssl_process:controlling_process(Pid, NewOwner).
+
+-spec getopts(tlssocket(), [gen_tcp:option_name()]) ->
+    {ok, [gen_tcp:option()]} | {error, reason()}.
 
 getopts(#tlssocket{tcp_sock = TcpSock}, OptionNames) ->
     inet:getopts(TcpSock, OptionNames).
 
+-spec setopts(tlssocket(),  [gen_tcp:option()]) ->
+    ok | {error, reason()}.
+
 setopts(#tlssocket{tcp_sock = TcpSock}, Options) ->
     inet:setopts(TcpSock, Options).
+
+-spec getstat(tlssocket()) ->
+    {ok, [{inet:stat_option(), integer()}]} | {error, inet:posix()}.
 
 getstat(#tlssocket{tcp_sock = TcpSock}) ->
     inet:getstat(TcpSock).
 
+-spec getstat(tlssocket(), [inet:stat_option()]) ->
+    {ok, [{inet:stat_option(), integer()}]} | {error, inet:posix()}.
+
 getstat(#tlssocket{tcp_sock = TcpSock}, Opt) ->
     inet:getstat(TcpSock, Opt).
+
+-spec peername(tlssocket()) ->
+    {ok, {inet:ip_address(), inet:port_number()}} | {error, reason()}.
 
 peername(#tlssocket{tcp_sock = TcpSock}) ->
     inet:peername(TcpSock).
 
+-spec sockname(tlssocket()) ->
+    {ok, {inet:ip_address(), inet:port_number()}} | {error, reason()}.
+
 sockname(#tlssocket{tcp_sock = TcpSock}) ->
     inet:sockname(TcpSock).
+
+-spec listen(inet:port_number(), [listen_option()]) ->
+    {ok, tlssocket()} | {error, reason()}.
 
 listen(Port, Options) ->
     {TcpOpt, TlsOpt} = get_options(Options),
@@ -133,8 +171,14 @@ listen(Port, Options) ->
             Error
     end.
 
+-spec transport_accept(tlssocket()) ->
+    {ok, tlssocket()} |{error, reason()}.
+
 transport_accept(ListenSocket) ->
     transport_accept(ListenSocket, infinity).
+
+-spec transport_accept(tlssocket(), timeout()) ->
+    {ok, tlssocket()} | {error, reason()}.
 
 transport_accept(#tlssocket{tcp_sock = TcpSock, tls_opt = TlsOpt}, Timeout) ->
     case gen_tcp:accept(TcpSock, Timeout) of
@@ -144,13 +188,21 @@ transport_accept(#tlssocket{tcp_sock = TcpSock, tls_opt = TlsOpt}, Timeout) ->
             UnexpectedError
     end.
 
+-spec ssl_accept(tlssocket()) -> ok | {error, reason()}.
+
 ssl_accept(#tlssocket{tcp_sock = TcpSock, ssl_pid = Pid}) ->
     erltls_ssl_process:handshake(Pid, TcpSock).
+
+-spec ssl_accept(tlssocket() | port(), timeout()| [tls_option()]) ->
+    ok | {ok, tlssocket()} | {error, reason()}.
 
 ssl_accept(Socket, SslOptions) when is_list(SslOptions)->
     ssl_accept(Socket);
 ssl_accept(Socket, _Timeout)  ->
     ssl_accept(Socket).
+
+-spec ssl_accept(tlssocket() | port(), [tls_option()], timeout()) ->
+    {ok, tlssocket()} | {error, reason()}.
 
 ssl_accept(Socket, SslOptions, _Timeout) when is_port(Socket) ->
     case erltls_ssl_process:new(Socket, SslOptions, ?SSL_ROLE_SERVER) of
@@ -167,6 +219,8 @@ ssl_accept(Socket, SslOptions, _Timeout) when is_port(Socket) ->
 ssl_accept(#tlssocket{tcp_sock = TcpSock, ssl_pid = Pid}, _SslOptions, _Timeout) ->
     erltls_ssl_process:handshake(Pid, TcpSock).
 
+-spec send(tlssocket(), iodata()) -> ok | {error, reason()}.
+
 send(#tlssocket{ssl_pid = Pid, tcp_sock = TcpSocket}, Data) ->
     case erltls_ssl_process:encode_data(Pid, Data) of
         {ok, TlsData} ->
@@ -175,8 +229,12 @@ send(#tlssocket{ssl_pid = Pid, tcp_sock = TcpSocket}, Data) ->
             Error
     end.
 
+-spec recv(tlssocket(), integer()) -> {ok, binary()| list()} | {error, reason()}.
+
 recv(Socket, Length) ->
     recv(Socket, Length, infinity).
+
+-spec recv(tlssocket(), integer(), timeout()) -> {ok, binary()| list()} | {error, reason()}.
 
 recv(#tlssocket{tcp_sock = TcpSock, ssl_pid = Pid}, Length, Timeout) ->
     case gen_tcp:recv(TcpSock, Length, Timeout) of
@@ -185,6 +243,8 @@ recv(#tlssocket{tcp_sock = TcpSock, ssl_pid = Pid}, Length, Timeout) ->
         Error ->
             Error
     end.
+
+-spec close(tlssocket()) -> term().
 
 close(#tlssocket{ssl_pid = Pid, tcp_sock = TcpSocket}) ->
     case catch erltls_ssl_process:shutdown(Pid) of
