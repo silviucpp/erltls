@@ -84,7 +84,8 @@ connect(Socket, SslOptions) ->
     {ok, tlssocket()} | {error, reason()}.
 
 connect(Socket, SslOptions, _Timeout) when is_port(Socket) ->
-    erltls_ssl_process:new(Socket, SslOptions, ?SSL_ROLE_CLIENT);
+    %todo: we should here apply default options for emulated options and pass emulated one to ssl process
+    erltls_ssl_process:new(Socket, SslOptions, [], ?SSL_ROLE_CLIENT);
 connect(Host, Port, Options) ->
     connect(Host, Port, Options, infinity).
 
@@ -92,10 +93,14 @@ connect(Host, Port, Options) ->
     {ok, tlssocket()} | {error, reason()}.
 
 connect(Host, Port, Options, Timeout) ->
-    {TcpOpt, TlsOpt} = get_options(Options),
-    case gen_tcp:connect(Host, Port, TcpOpt, Timeout) of
-        {ok, TcpSocket} ->
-            erltls_ssl_process:new(TcpSocket, TlsOpt, ?SSL_ROLE_CLIENT);
+    case get_options(Options) of
+        {ok, TcpOpt, TlsOpt, EmulatedOpts} ->
+            case gen_tcp:connect(Host, Port, TcpOpt, Timeout) of
+                {ok, TcpSocket} ->
+                    erltls_ssl_process:new(TcpSocket, TlsOpt, EmulatedOpts, ?SSL_ROLE_CLIENT);
+                Error ->
+                    Error
+            end;
         Error ->
             Error
     end.
@@ -110,12 +115,14 @@ controlling_process(#tlssocket{ssl_pid = Pid}, NewOwner) ->
     {ok, [gen_tcp:option()]} | {error, reason()}.
 
 getopts(#tlssocket{tcp_sock = TcpSock}, OptionNames) ->
+    %@todo: keep track of ssl and emulated options
     inet:getopts(TcpSock, OptionNames).
 
 -spec setopts(tlssocket(),  [gen_tcp:option()]) ->
     ok | {error, reason()}.
 
 setopts(#tlssocket{tcp_sock = TcpSock}, Options) ->
+    %@todo: keep track of ssl and emulated options
     inet:setopts(TcpSock, Options).
 
 -spec getstat(tlssocket()) ->
@@ -146,15 +153,14 @@ sockname(#tlssocket{tcp_sock = TcpSock}) ->
     {ok, tlssocket()} | {error, reason()}.
 
 listen(Port, Options) ->
-    {TcpOpt, TlsOpt} = get_options(Options),
-    case gen_tcp:listen(Port, TcpOpt) of
-        {ok, TcpSocket} ->
-             case erltls_ssl_process:new(TcpSocket, TlsOpt, ?SSL_ROLE_SERVER) of
-                 {ok, SocketRef} ->
-                     {ok, SocketRef#tlssocket{tls_opt = TlsOpt}};
-                 Error ->
-                     Error
-             end;
+    case get_options(Options) of
+        {ok, TcpOpt, TlsOpt, EmulatedOpt} ->
+            case gen_tcp:listen(Port, TcpOpt) of
+                {ok, TcpSocket} ->
+                    erltls_ssl_process:new(TcpSocket, TlsOpt, EmulatedOpt, ?SSL_ROLE_SERVER);
+                Error ->
+                    Error
+            end;
         Error ->
             Error
     end.
@@ -168,12 +174,17 @@ transport_accept(ListenSocket) ->
 -spec transport_accept(tlssocket(), timeout()) ->
     {ok, tlssocket()} | {error, reason()}.
 
-transport_accept(#tlssocket{tcp_sock = TcpSock, tls_opt = TlsOpt}, Timeout) ->
+transport_accept(#tlssocket{tcp_sock = TcpSock, ssl_pid = Pid}, Timeout) ->
     case gen_tcp:accept(TcpSock, Timeout) of
         {ok, ASocket} ->
-            erltls_ssl_process:new(ASocket, TlsOpt, ?SSL_ROLE_SERVER);
-        UnexpectedError ->
-            UnexpectedError
+            case erltls_ssl_process:get_options(Pid) of
+                {ok, TlsOpts, EmulatedOpts} ->
+                    erltls_ssl_process:new(ASocket, TlsOpts, EmulatedOpts, ?SSL_ROLE_SERVER);
+                Error ->
+                    Error
+            end;
+        Error ->
+            Error
     end.
 
 -spec ssl_accept(tlssocket()) -> ok | {error, reason()}.
@@ -193,7 +204,8 @@ ssl_accept(Socket, _Timeout)  ->
     {ok, tlssocket()} | {error, reason()}.
 
 ssl_accept(Socket, SslOptions, _Timeout) when is_port(Socket) ->
-    case erltls_ssl_process:new(Socket, SslOptions, ?SSL_ROLE_SERVER) of
+    %todo: we should here apply default options for emulated options and pass emulated one to ssl process
+    case erltls_ssl_process:new(Socket, SslOptions, [], ?SSL_ROLE_SERVER) of
         {ok, SslSocket} ->
             case erltls_ssl_process:handshake(SslSocket#tlssocket.ssl_pid, Socket) of
                 ok ->
@@ -241,17 +253,27 @@ close(#tlssocket{ssl_pid = Pid, tcp_sock = TcpSocket}) ->
 %internals
 
 get_options(Options) ->
-    get_options(Options, [], []).
+    try
+        get_options(Options, [], [], [])
+    catch
+        _:Error ->
+            Error
+    end.
 
-get_options([], TcpOpt, TlsOpt) ->
-    {TcpOpt, TlsOpt};
-get_options([H|T], TcpOpt, TlsOpt) ->
+get_options([H|T], TcpOpt, TlsOpt, EmulatedOpt) ->
     case is_tls_option(H) of
         true ->
-            get_options(T, TcpOpt, [H|TlsOpt]);
+            get_options(T, TcpOpt, [H|TlsOpt], EmulatedOpt);
         _ ->
-            get_options(T, [H|TcpOpt], TlsOpt)
-    end.
+            case is_emulated_option(H) of
+                false ->
+                    get_options(T, [H|TcpOpt], TlsOpt, EmulatedOpt);
+                _ ->
+                    get_options(T, TcpOpt, TlsOpt, [H|EmulatedOpt])
+            end
+    end;
+get_options([], TcpOpt, TlsOpt, EmulatedOpt) ->
+    {ok, TcpOpt, TlsOpt, EmulatedOpt}.
 
 is_tls_option({certfile, _}) ->
     true;
@@ -267,3 +289,24 @@ is_tls_option({compression, _}) ->
     true;
 is_tls_option(_) ->
     false.
+
+is_emulated_option({header, V}) ->
+    validate_emulated_option(header, V),
+    true;
+is_emulated_option({packet, V}) ->
+    validate_emulated_option(packet, V),
+    true;
+is_emulated_option({packet_size, V}) ->
+    validate_emulated_option(packet_size, V),
+    true;
+is_emulated_option(_) ->
+    false.
+
+validate_emulated_option(packet, Value) when not (is_atom(Value) orelse is_integer(Value)) ->
+    throw({error, {options, {packet,Value}}});
+validate_emulated_option(packet_size, Value) when not is_integer(Value) ->
+    throw({error, {options, {packet_size,Value}}});
+validate_emulated_option(header, Value) when not is_integer(Value) ->
+    throw({error, {options, {header,Value}}});
+validate_emulated_option(_, _) ->
+    ok.

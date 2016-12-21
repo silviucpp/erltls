@@ -13,6 +13,8 @@
 -record(state, {
     tcp,
     tls_ref,
+    tls_opts,
+    emulated_opts,
     owner_pid,
     owner_monitor_ref,
     tcp_monitor_ref,
@@ -23,7 +25,8 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -export([
-    new/3,
+    new/4,
+    get_options/1,
     controlling_process/2,
     handshake/2,
     encode_data/2,
@@ -31,18 +34,21 @@
     shutdown/1
 ]).
 
-new(TcpSocket, TlsOptions, Role) ->
+new(TcpSocket, TlsOptions, EmulatedOpts, Role) ->
     case get_context(TlsOptions, Role) of
         {ok, Context} ->
             case erltls_nif:ssl_new(Context, Role, get_ssl_flags(TlsOptions)) of
                 {ok, TlsSock} ->
-                    get_ssl_process(Role, TcpSocket, TlsSock);
+                    get_ssl_process(Role, TcpSocket, TlsSock, TlsOptions, EmulatedOpts);
                 Error ->
                     Error
             end;
         Error ->
             Error
     end.
+
+get_options(Pid) ->
+    call(Pid, get_options).
 
 controlling_process(Pid, NewOwner) ->
     call(Pid, {controlling_process, self(), NewOwner}).
@@ -67,6 +73,32 @@ init(#state{tcp = TcpSocket} = State) ->
     SocketRef = #tlssocket{tcp_sock = TcpSocket, ssl_pid = self()},
     {ok, State#state{owner_monitor_ref = OwnerMonitorRef, tcp_monitor_ref = TcpMonitorRef, socket_ref = SocketRef}}.
 
+handle_call({encode_data, Data}, _From, #state{tls_ref = TlsSock} = State) ->
+    {reply, erltls_nif:ssl_send_data(TlsSock, Data), State};
+
+handle_call({decode_data, TlsData}, _From, #state{tls_ref = TlsSock} = State) ->
+    {reply, erltls_nif:ssl_feed_data(TlsSock, TlsData), State};
+
+handle_call(get_options, _From, #state{emulated_opts = EmulatedOpts, tls_opts = TlsOpts} = State) ->
+    {reply, {ok, TlsOpts, EmulatedOpts}, State};
+
+handle_call({controlling_process, SenderPid, NewOwner}, _From, State) ->
+    #state{owner_pid = OwnerPid, owner_monitor_ref = OwnerMonitRef} = State,
+
+    case SenderPid =:= OwnerPid of
+        true ->
+            case OwnerMonitRef of
+                undefined ->
+                    ok;
+                _ ->
+                    erlang:demonitor(OwnerMonitRef)
+            end,
+            NewOwnerRef = erlang:monitor(process, NewOwner),
+            {reply, ok, State#state {owner_pid = NewOwner, owner_monitor_ref = NewOwnerRef}};
+        _ ->
+            {reply, {error, not_owner}, State}
+    end;
+
 handle_call({handshake, TcpSocket}, _From, #state{tls_ref = TlsSock} = State) ->
     case State#state.hk_completed of
         true ->
@@ -86,29 +118,6 @@ handle_call({handshake, TcpSocket}, _From, #state{tls_ref = TlsSock} = State) ->
                 Error ->
                     Error
             end
-    end;
-
-handle_call({encode_data, Data}, _From, #state{tls_ref = TlsSock} = State) ->
-    {reply, erltls_nif:ssl_send_data(TlsSock, Data), State};
-
-handle_call({decode_data, TlsData}, _From, #state{tls_ref = TlsSock} = State) ->
-    {reply, erltls_nif:ssl_feed_data(TlsSock, TlsData), State};
-
-handle_call({controlling_process, SenderPid, NewOwner}, _From, State) ->
-    #state{owner_pid = OwnerPid, owner_monitor_ref = OwnerMonitRef} = State,
-
-    case SenderPid =:= OwnerPid of
-        true ->
-            case OwnerMonitRef of
-                undefined ->
-                    ok;
-                _ ->
-                    erlang:demonitor(OwnerMonitRef)
-            end,
-            NewOwnerRef = erlang:monitor(process, NewOwner),
-            {reply, ok, State#state {owner_pid = NewOwner, owner_monitor_ref = NewOwnerRef}};
-        _ ->
-            {reply, {error, not_owner}, State}
     end;
 
 handle_call(shutdown, _From, #state{tcp = TcpSocket, tls_ref = TlsRef} = State) ->
@@ -180,21 +189,6 @@ call(Pid, Message) ->
             {error, Exception}
     end.
 
-start_link(TcpSocket, TlsSock, HkCompleted) ->
-    State = #state{tcp = TcpSocket, tls_ref = TlsSock, owner_pid = self(), hk_completed = HkCompleted},
-    case gen_server:start_link(?MODULE, State, []) of
-        {ok, Pid} ->
-            case gen_tcp:controlling_process(TcpSocket, Pid) of
-                ok ->
-                    {ok, #tlssocket{tcp_sock = TcpSocket, ssl_pid = Pid}};
-                Error ->
-                    stop_process(Pid),
-                    Error
-            end;
-        Error ->
-            Error
-    end.
-
 %internal methods
 
 get_verify(verify_none) ->
@@ -224,17 +218,40 @@ get_context(TlsOptions, Role) ->
     Ciphers = get_ciphers(erltls_utils:lookup(ciphers, TlsOptions)),
     erltls_manager:get_ctx(CertFile, Ciphers, DhFile, CaFile, mandatory_cert(Role)).
 
-get_ssl_process(?SSL_ROLE_SERVER, TcpSocket, TlsSock) ->
-    start_link(TcpSocket, TlsSock, false);
-get_ssl_process(?SSL_ROLE_CLIENT, TcpSocket, TlsSock) ->
+get_ssl_process(?SSL_ROLE_SERVER, TcpSocket, TlsSock, TlsOpts, EmulatedOpts) ->
+    start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, false);
+get_ssl_process(?SSL_ROLE_CLIENT, TcpSocket, TlsSock, TlsOpts, EmulatedOpts) ->
     case inet:getopts(TcpSocket, [active]) of
         {ok, [{active, CurrentMode}]} ->
             change_active(TcpSocket, CurrentMode, false),
             case do_handshake(TcpSocket, TlsSock) of
                 ok ->
                     change_active(TcpSocket, false, CurrentMode),
-                    start_link(TcpSocket, TlsSock, true);
+                    start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, true);
                 Error ->
+                    Error
+            end;
+        Error ->
+            Error
+    end.
+
+start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, HkCompleted) ->
+    State = #state{
+        tcp = TcpSocket,
+        tls_ref = TlsSock,
+        owner_pid = self(),
+        hk_completed = HkCompleted,
+        emulated_opts = EmulatedOpts,
+        tls_opts = TlsOpts
+    },
+
+    case gen_server:start_link(?MODULE, State, []) of
+        {ok, Pid} ->
+            case gen_tcp:controlling_process(TcpSocket, Pid) of
+                ok ->
+                    {ok, #tlssocket{tcp_sock = TcpSocket, ssl_pid = Pid}};
+                Error ->
+                    stop_process(Pid),
                     Error
             end;
         Error ->

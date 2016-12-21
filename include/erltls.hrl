@@ -2,7 +2,7 @@
 
 %socket ref
 
--record(tlssocket, {tcp_sock, ssl_pid, tls_opt = undefined}).
+-record(tlssocket, {tcp_sock, ssl_pid}).
 
 -type tls_option()::
     {verify, verify_type()} |

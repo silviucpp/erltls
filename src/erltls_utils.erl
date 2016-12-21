@@ -4,7 +4,8 @@
 -export([
     to_bin/1,
     lookup/2,
-    lookup/3
+    lookup/3,
+    delete/2
 ]).
 
 to_bin(Data) when is_binary(Data) ->
@@ -26,3 +27,6 @@ lookup(Key, List, Default) ->
         _ ->
             Default
     end.
+
+delete(Key, List) ->
+    lists:keydelete(Key, 1, List).
