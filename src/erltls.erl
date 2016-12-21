@@ -4,19 +4,7 @@
 -include("erltls.hrl").
 
 %% todo:
-%% 1. implement the following methods:
-%% versions/1
-%% shutdown/2
-%% renegotiate/1
-%% prf/5
-%% peercert/1
-%% negotiated_protocol/1
-%% format_error/1
-%% eccs/1
-%% eccs/0
-%% connection_information/1
-%% connection_information/2
-%% close/2
+%% 1. implement the missing methods
 %% 2. In handshake process add a timeout param (affects connect and ssl_accept methods)
 %% 3. Allow setting additional ssl options in ssl_accept
 %% 4. write a test for upgrading from tcp to tls
