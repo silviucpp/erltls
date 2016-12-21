@@ -60,7 +60,6 @@ test_connect_complete(_Config) ->
         {active, true},
         {sndbuf, 60000},
         {recbuf, 60000},
-        {certfile, get_certificate()},
         {ciphers, ["AES128-GCM-SHA256"]},
         {verify, verify_none},
         {compression, compression_none}
@@ -83,7 +82,6 @@ test_handshake_failed(_Config) ->
         {active, true},
         {sndbuf, 60000},
         {recbuf, 60000},
-        {certfile, get_certificate()},
         {ciphers, ["DHE-RSA-AES256-SHA"]},
         {verify, verify_none},
         {compression, compression_none}
@@ -97,7 +95,6 @@ test_owner_died(_Config) ->
     Fun = fun() ->
         Opt = [
             binary,
-            {certfile, get_certificate()},
             {verify, verify_none},
             {compression, compression_none}
         ],
@@ -123,7 +120,6 @@ test_owner_change(_Config) ->
 
     Opt = [
         binary,
-        {certfile, get_certificate()},
         {verify, verify_none},
         {compression, compression_none}
     ],
@@ -158,7 +154,6 @@ test_send_recv(_Config) ->
         {active, false},
         {sndbuf, 60000},
         {recbuf, 60000},
-        {certfile, get_certificate()},
         {ciphers, ["AES128-GCM-SHA256"]},
         {verify, verify_none},
         {compression, compression_none}
@@ -187,7 +182,6 @@ test_active_mode(_Config) ->
         binary,
         {packet, 0},
         {active, 1},
-        {certfile, get_certificate()},
         {ciphers, ["AES128-GCM-SHA256"]},
         {verify, verify_none},
         {compression, compression_none}
@@ -212,13 +206,12 @@ test_server_mode(_Config) ->
         binary,
         {packet, 0},
         {active, false},
-        {certfile, get_certificate()},
         {ciphers, ["AES128-GCM-SHA256"]},
         {verify, verify_none},
         {compression, compression_none}
     ],
 
-    {ok, LSocket} = erltls:listen(Port, Opt),
+    {ok, LSocket} = erltls:listen(Port, [{certfile, get_certificate()} | Opt]),
 
     ClientProc = fun() ->
         {ok, CSocket} = erltls:connect("127.0.0.1", Port, Opt),
