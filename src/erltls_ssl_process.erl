@@ -24,7 +24,6 @@
 
 -export([
     new/3,
-    close/1,
     controlling_process/2,
     handshake/2,
     encode_data/2,
@@ -44,9 +43,6 @@ new(TcpSocket, TlsOptions, Role) ->
         Error ->
             Error
     end.
-
-close(Pid) ->
-    call(Pid, close).
 
 controlling_process(Pid, NewOwner) ->
     call(Pid, {controlling_process, self(), NewOwner}).
@@ -93,10 +89,10 @@ handle_call({handshake, TcpSocket}, _From, #state{tls_ref = TlsSock} = State) ->
     end;
 
 handle_call({encode_data, Data}, _From, #state{tls_ref = TlsSock} = State) ->
-    {reply, do_encode(TlsSock, Data), State};
+    {reply, erltls_nif:ssl_send_data(TlsSock, Data), State};
 
 handle_call({decode_data, TlsData}, _From, #state{tls_ref = TlsSock} = State) ->
-    {reply, do_decode(TlsSock, TlsData), State};
+    {reply, erltls_nif:ssl_feed_data(TlsSock, TlsData), State};
 
 handle_call({controlling_process, SenderPid, NewOwner}, _From, State) ->
     #state{owner_pid = OwnerPid, owner_monitor_ref = OwnerMonitRef} = State,
@@ -115,8 +111,8 @@ handle_call({controlling_process, SenderPid, NewOwner}, _From, State) ->
             {reply, {error, not_owner}, State}
     end;
 
-handle_call(shutdown, _From, State) ->
-    {reply, erltls_nif:ssl_shutdown(State#state.tls_ref), State};
+handle_call(shutdown, _From, #state{tcp = TcpSocket, tls_ref = TlsRef} = State) ->
+    {stop, normal, shutdown_ssl(TcpSocket, TlsRef), State};
 
 handle_call(close, _From, State) ->
     {stop, normal, ok, State};
@@ -129,8 +125,13 @@ handle_cast(Request, State) ->
     ?ERROR_MSG("handle_cast unknown request: ~p", [Request]),
     {noreply, State}.
 
-handle_info({tcp, TcpSocket, Data}, #state{tcp = TcpSocket, tls_ref = TlsRef, owner_pid = Pid, socket_ref = SockRef} = State) ->
-    Pid ! {ssl, SockRef, erltls_nif:ssl_feed_data(TlsRef, Data)},
+handle_info({tcp, TcpSocket, TlsData}, #state{tcp = TcpSocket, tls_ref = TlsRef, owner_pid = Pid, socket_ref = SockRef} = State) ->
+    case erltls_nif:ssl_feed_data(TlsRef, TlsData) of
+        {ok, RawData} ->
+            Pid ! {ssl, SockRef, RawData};
+        Error ->
+            Pid ! {ssl_error, SockRef, Error}
+    end,
     {noreply, State};
 
 handle_info({tcp_closed, TcpSocket}, #state{tcp = TcpSocket, owner_pid = Pid, socket_ref = SockRef} = State) ->
@@ -150,14 +151,7 @@ handle_info({'DOWN', MonitorRef, _, _, _}, State) ->
 
     case MonitorRef of
         OwnerMonitorRef ->
-            case erltls_nif:ssl_shutdown(TlsRef) of
-                ok ->
-                    ok;
-                BytesWrite when is_binary(BytesWrite) ->
-                    gen_tcp:send(TcpSocket, BytesWrite);
-                Error ->
-                    ?ERROR_MSG("shutdown unexpected error:~p", [Error])
-            end,
+            shutdown_ssl(TcpSocket, TlsRef),
             gen_tcp:close(TcpSocket),
             {stop, normal, State};
         TcpMonitorRef ->
@@ -194,7 +188,7 @@ start_link(TcpSocket, TlsSock, HkCompleted) ->
                 ok ->
                     {ok, #tlssocket{tcp_sock = TcpSocket, ssl_pid = Pid}};
                 Error ->
-                    close(Pid),
+                    stop_process(Pid),
                     Error
             end;
         Error ->
@@ -252,22 +246,6 @@ change_active(_TcpSocket, CurrentMode, NewMode) when CurrentMode =:= NewMode ->
 change_active(TcpSocket, _CurrentMode, NewMode) ->
     inet:setopts(TcpSocket, [{active, NewMode}]).
 
-do_encode(TlsSock, RawData) ->
-    case erltls_nif:ssl_send_data(TlsSock, RawData) of
-        TlsData when is_binary(TlsData) ->
-            {ok, TlsData};
-        Error ->
-            Error
-    end.
-
-do_decode(TlsSock, TlsData) ->
-    case erltls_nif:ssl_feed_data(TlsSock, TlsData) of
-        RawData when is_binary(RawData) ->
-            {ok, RawData};
-        Error ->
-            Error
-    end.
-
 do_handshake(TcpSocket, TlsSock) ->
     case erltls_nif:ssl_handshake(TlsSock) of
         {ok, 1} ->
@@ -301,11 +279,25 @@ read_handshake(TcpSocket, TlsSock) ->
 
 send_pending(TcpSocket, TlsSock) ->
     case erltls_nif:ssl_send_pending(TlsSock) of
-        <<>> ->
+        {ok, <<>>} ->
             ok;
-        Data ->
+        {ok, Data} ->
             gen_tcp:send(TcpSocket, Data)
     end.
+
+shutdown_ssl(TcpSocket, TlsRef) ->
+    case erltls_nif:ssl_shutdown(TlsRef) of
+        {ok, Bytes} ->
+            gen_tcp:send(TcpSocket, Bytes);
+        ok ->
+            ok;
+        Error ->
+            ?ERROR_MSG("shutdown unexpected error:~p", [Error]),
+            Error
+    end.
+
+stop_process(Pid) ->
+    call(Pid, close).
 
 mandatory_cert(?SSL_ROLE_SERVER) ->
     true;

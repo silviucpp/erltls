@@ -235,16 +235,7 @@ recv(#tlssocket{tcp_sock = TcpSock, ssl_pid = Pid}, Length, Timeout) ->
 -spec close(tlssocket()) -> term().
 
 close(#tlssocket{ssl_pid = Pid, tcp_sock = TcpSocket}) ->
-    case catch erltls_ssl_process:shutdown(Pid) of
-        ok ->
-            ok;
-        BytesWrite when is_binary(BytesWrite) ->
-            gen_tcp:send(TcpSocket, BytesWrite);
-        Error ->
-            ?ERROR_MSG("shutdown unexpected error:~p", [Error])
-    end,
-
-    erltls_ssl_process:close(Pid),
+    erltls_ssl_process:shutdown(Pid),
     gen_tcp:close(TcpSocket).
 
 %internals

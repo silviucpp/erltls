@@ -82,7 +82,6 @@ Options currently related to `erltls` only:
 ### Known limitations
 
 - working only with `{packet, 0}` inet option 
-- no matter what `{mode, list | binary}` it's used binary data is returned all the time
 - When you use `recv/2` and `Length` > 0 it's not returning a number of bytes equal's with `Length`, basically reads `Length` bytes from
   the wire, decode them and returns the result. So it might be less bytes as time there is also the SSL/TLS record overhead counted.
 - Handshake process doesn't have a timeout implemented yet. So in `connect/*` or `ssl_accept/*` the timeout param is actually 

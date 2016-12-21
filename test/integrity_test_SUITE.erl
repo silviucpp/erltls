@@ -21,6 +21,7 @@ groups() -> [
         test_owner_change,
         test_send_recv,
         test_active_mode,
+        test_list_mode,
         test_server_mode
     ]}
 ].
@@ -193,6 +194,28 @@ test_active_mode(_Config) ->
 
     receive
         {ssl, Socket, <<"HTTP/", _Rest/binary>>} ->
+            ok;
+        Msg ->
+            throw(Msg)
+    end,
+    ok = erltls:close(Socket),
+    true.
+
+test_list_mode(_Config) ->
+    Opt = [
+        {packet, 0},
+        {active, 1},
+        {ciphers, ["AES128-GCM-SHA256"]},
+        {verify, verify_none},
+        {compression, compression_none}
+    ],
+
+    Request = <<"GET /api/status.json?callback=apiStatus HTTP/1.1\r\nHost: status.github.com\r\nConnection: close\r\n\r\n">>,
+    {ok, Socket} = erltls:connect("status.github.com", 443, Opt),
+    ok = erltls:send(Socket, Request),
+
+    receive
+        {ssl, Socket, [$H, $T, $T, $P | _Tail]} ->
             ok;
         Msg ->
             throw(Msg)
