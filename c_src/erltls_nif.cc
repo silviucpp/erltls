@@ -9,6 +9,10 @@ const char kAtomOk[] = "ok";
 const char kAtomError[] = "error";
 const char kAtomSllNotStarted[] = "ssl_not_started";
 const char kAtomBadArg[] = "badarg";
+const char kAtomCtxCertfile[] = "certfile";
+const char kAtomCtxDhfile[] = "dhfile";
+const char kAtomCtxCacerts[] = "cacerts";
+const char kAtomCtxCiphers[] = "ciphers";
 
 atoms ATOMS;
 
@@ -29,6 +33,10 @@ int on_nif_load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     ATOMS.atomError = make_atom(env, kAtomError);
     ATOMS.atomSslNotStarted = make_atom(env, kAtomSllNotStarted);
     ATOMS.atomBadArg = make_atom(env, kAtomBadArg);
+    ATOMS.atomCtxCertfile = make_atom(env, kAtomCtxCertfile);
+    ATOMS.atomCtxDhfile = make_atom(env, kAtomCtxDhfile);
+    ATOMS.atomCtxCacerts = make_atom(env, kAtomCtxCacerts);
+    ATOMS.atomCtxCiphers = make_atom(env, kAtomCtxCiphers);
 
     erltls_data* data = static_cast<erltls_data*>(enif_alloc(sizeof(erltls_data)));
     open_resources(env, data);
@@ -59,7 +67,7 @@ int on_nif_upgrade(ErlNifEnv* env, void** priv, void** old_priv, ERL_NIF_TERM in
 
 static ErlNifFunc nif_funcs[] =
 {    
-    {"new_context", 4, enif_ssl_ctx_new},
+    {"new_context", 1, enif_ssl_new_context},
     {"ciphers", 1, enif_ciphers},
     {"ssl_new", 3, enif_ssl_socket_new},
     {"ssl_handshake", 1, enif_ssl_socket_handshake},

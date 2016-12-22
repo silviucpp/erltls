@@ -9,6 +9,7 @@
 
 -define(SERVER, ?MODULE).
 -define(ETS_SSL_CONTEXT, etls_ssl_context_table).
+-define(DEFAULT_CIPHERS, <<"DEFAULT:!EXPORT:!LOW:!RC4:!SSLv2">>).
 
 -record(state, {}).
 
@@ -25,14 +26,10 @@ get_context(TlsOptions, MandatoryCertificate) ->
         true ->
             {error, missing_certificate};
         _ ->
-            DhFile = erltls_utils:lookup(dhfile, TlsOptions),
-            CaFile = erltls_utils:lookup(cacerts, TlsOptions),
-            Ciphers = get_ciphers(erltls_utils:lookup(ciphers, TlsOptions)),
-
-            CtxKey = get_ctx_Key(CertFile, Ciphers, DhFile, CaFile),
-            case ets_get(CtxKey) of
+            ContextHash = get_context_hash(TlsOptions),
+            case ets_get(ContextHash) of
                 null ->
-                    gen_server:call(?MODULE, {get_context, CtxKey, CertFile, Ciphers, DhFile, CaFile});
+                    gen_server:call(?MODULE, {get_context, ContextHash, TlsOptions});
                 Context ->
                     {ok, Context}
             end
@@ -45,12 +42,15 @@ init([]) ->
     ?ETS_SSL_CONTEXT = ets:new(?ETS_SSL_CONTEXT, [set, named_table, protected, {read_concurrency, true}]),
     {ok, #state{}}.
 
-handle_call({get_context, CtxKey, CertFile, Ciphers, DhFile, CaFile}, _From, State) ->
-    Result = case ets_get(CtxKey) of
+handle_call({get_context, ContextHash, TlsOptions0}, _From, State) ->
+    Result = case ets_get(ContextHash) of
         null ->
-            case erltls_nif:new_context(CertFile, Ciphers, DhFile, CaFile) of
+            Ciphers = get_ciphers(erltls_utils:lookup(ciphers, TlsOptions0)),
+            TlsOptions = [{ciphers, Ciphers} | erltls_utils:delete(ciphers, TlsOptions0)],
+
+            case erltls_nif:new_context(TlsOptions) of
                 {ok, Context} ->
-                    true = ets_set(CtxKey, Context),
+                    true = ets_set(ContextHash, Context),
                     {ok, Context};
                 Error ->
                     Error
@@ -89,12 +89,11 @@ ets_get(Identifier) ->
             null
     end.
 
-get_ctx_Key(CertFile, Ciphers, DhFile, CaFile) ->
-    CertFileBin = erltls_utils:to_bin(CertFile),
-    CiphersBin = erltls_utils:to_bin(Ciphers),
-    DhFileBin = erltls_utils:to_bin(DhFile),
-    CaFileBin = erltls_utils:to_bin(CaFile),
-    <<CertFileBin/binary, "-", CiphersBin/binary, "-", DhFileBin/binary, "-", CaFileBin/binary>>.
+get_context_hash([]) ->
+    <<"default">>;
+get_context_hash(Options0) ->
+    ValuesBin = lists:foldl(fun({_K, V}, Acc) -> [erltls_utils:to_bin(V) | Acc] end, [], lists:keysort(1, Options0)),
+    list_to_binary(ValuesBin).
 
 missing_cert(_, false) ->
     false;
@@ -106,6 +105,6 @@ missing_cert(_, true) ->
     true.
 
 get_ciphers(null) ->
-    null;
+    ?DEFAULT_CIPHERS;
 get_ciphers(Ciphers) when is_list(Ciphers) ->
     string:join(Ciphers, ":").

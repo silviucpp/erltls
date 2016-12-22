@@ -6,7 +6,7 @@
 -on_load(load_nif/0).
 
 -export([
-    new_context/4,
+    new_context/1,
     ciphers/1,
     ssl_new/3,
     ssl_handshake/1,
@@ -39,7 +39,7 @@ get_nif_library_path() ->
 not_loaded(Line) ->
     erlang:nif_error({not_loaded, [{module, ?MODULE}, {line, Line}]}).
 
-new_context(_KeyFile, _Ciphers, _DhFile, _CaFile) ->
+new_context(_TlsOptions) ->
     ?NOT_LOADED.
 
 ciphers(_Ctx) ->

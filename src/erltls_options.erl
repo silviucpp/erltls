@@ -76,10 +76,12 @@ get_options([H|T], TcpOpt, TlsOpt, EmulatedOpt) ->
 get_options([], TcpOpt, TlsOpt, EmulatedOpt) ->
     {ok, TcpOpt, TlsOpt, EmulatedOpt}.
 
-get_option_key(El) when is_tuple(El) ->
-    element(1, El);
+get_option_key({K, _V}) ->
+    K;
 get_option_key(Key) when is_atom(Key) ->
-    Key.
+    Key;
+get_option_key(El) when is_tuple(El) ->
+    element(1, El).
 
 is_tls_option(Key) ->
     lists:member(Key, [

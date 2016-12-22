@@ -15,7 +15,11 @@ to_bin(Data) when is_list(Data) ->
 to_bin(Data) when is_atom(Data) ->
     atom_to_binary(Data, utf8);
 to_bin(Data) when is_integer(Data) ->
-    integer_to_binary(Data).
+    integer_to_binary(Data);
+to_bin(Data) when is_float(Data) ->
+    float_to_binary(Data, [compact, {decimals, 4}]);
+to_bin(Data) when is_tuple(Data) ->
+    to_bin(tuple_to_list(Data)).
 
 lookup(Key, List) ->
     lookup(Key, List, null).

@@ -14,28 +14,45 @@ struct enif_ssl_ctx
     SSL_CTX* ctx;
 };
 
-ERL_NIF_TERM enif_ssl_ctx_new(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+bool parse_context_props(ErlNifEnv* env, ERL_NIF_TERM list, ContextProperties* props)
+{
+    ERL_NIF_TERM head;
+    const ERL_NIF_TERM *items;
+    int arity;
+    
+    while(enif_get_list_cell(env, list, &head, &list))
+    {
+        if(!enif_get_tuple(env, head, &arity, &items) || arity != 2)
+            return false;
+        
+        ERL_NIF_TERM key = items[0];
+        ERL_NIF_TERM value = items[1];
+        
+        if(enif_is_identical(key, ATOMS.atomCtxCertfile))
+            get_string(env, value, &props->cert_file);
+        else if(enif_is_identical(key, ATOMS.atomCtxCacerts))
+            get_string(env, value, &props->ca_file);
+        else if(enif_is_identical(key, ATOMS.atomCtxCiphers))
+            get_string(env, value, &props->ciphers);
+        else if(enif_is_identical(key, ATOMS.atomCtxDhfile))
+            get_string(env, value, &props->dh_file);
+    }
+    
+    return true;
+}
+
+ERL_NIF_TERM enif_ssl_new_context(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     UNUSED(argc);
     
     erltls_data* data = static_cast<erltls_data*>(enif_priv_data(env));
     
-    std::string cert_file;
-    std::string ciphers;
-    std::string dh_file;
-    std::string ca_file;
-
-    bool has_cert_file = get_string(env, argv[0], &cert_file);
-    bool has_ciphers = get_string(env, argv[1], &ciphers);
-    bool has_dh_file = get_string(env, argv[2], &dh_file);
-    bool has_ca_file = get_string(env, argv[3], &ca_file);
+    ContextProperties props;
     
-    const char* cert_file_buff = has_cert_file ? cert_file.c_str() : NULL;
-    const char* ciphers_buff = has_ciphers ? ciphers.c_str() : NULL;
-    const char* dh_file_buff = has_dh_file ? dh_file.c_str() : NULL;
-    const char* ca_file_buff = has_ca_file ? ca_file.c_str() : NULL;
+    if(!parse_context_props(env, argv[0], &props))
+        return make_error(env, ATOMS.atomBadArg);
     
-    SSL_CTX* ctx = TlsManager::CreateContext(cert_file_buff, ciphers_buff, dh_file_buff, ca_file_buff);
+    SSL_CTX* ctx = TlsManager::CreateContext(props);
     
     if(!ctx)
         return make_error(env, kErrorFailedToCreateContext);

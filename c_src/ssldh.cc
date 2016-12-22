@@ -47,13 +47,13 @@ static unsigned char dh1024_g[] = {
     0x85, 0x5E, 0x6E, 0xEB, 0x22, 0xB3, 0xB2, 0xE5,
 };
 
-int SetupDH(SSL_CTX* ctx, const char* dh_file)
+int SetupDH(SSL_CTX* ctx, const std::string& dh_file)
 {
     scoped_ptr(dh, DH, NULL, DH_free);
     
-    if (dh_file != NULL)
+    if (!dh_file.empty())
     {
-        scoped_ptr(bio, BIO, BIO_new_file(dh_file, "r"), BIO_free);
+        scoped_ptr(bio, BIO, BIO_new_file(dh_file.c_str(), "r"), BIO_free);
         
         if (bio.get())
             dh.reset(PEM_read_bio_DHparams(bio.get(), NULL, NULL, NULL));
