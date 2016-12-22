@@ -2,6 +2,7 @@
 #include "ssldh.h"
 #include "erl_nif.h"
 
+#include <openssl/err.h>
 #include <memory>
 
 static const char kDefaultCiphers[] = "DEFAULT:!EXPORT:!LOW:!RC4:!SSLv2";
@@ -22,6 +23,9 @@ void TlsManager::InitOpenSSL()
 
 void TlsManager::CleanupOpenSSL()
 {
+    ERR_free_strings();
+    CRYPTO_cleanup_all_ex_data();
+    EVP_cleanup();
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
     OPENSSL_cleanup();
 #endif
