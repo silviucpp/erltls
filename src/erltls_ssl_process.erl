@@ -14,7 +14,7 @@
     tcp,
     tls_ref,
     tls_opts,
-    emulated_opts,
+    emul_opts = #emulated_opts{},
     owner_pid,
     owner_monitor_ref,
     tcp_monitor_ref,
@@ -27,6 +27,8 @@
 -export([
     new/4,
     get_options/1,
+    get_emulated_options/2,
+    set_emulated_options/2,
     controlling_process/2,
     handshake/2,
     encode_data/2,
@@ -49,6 +51,14 @@ new(TcpSocket, TlsOptions, EmulatedOpts, Role) ->
 
 get_options(Pid) ->
     call(Pid, get_options).
+
+get_emulated_options(Pid, OptionNames) ->
+    call(Pid, {get_emulated_options, OptionNames}).
+
+set_emulated_options(_, []) ->
+    ok;
+set_emulated_options(Pid, Opts) ->
+    call(Pid, {set_emulated_options, Opts}).
 
 controlling_process(Pid, NewOwner) ->
     call(Pid, {controlling_process, self(), NewOwner}).
@@ -79,8 +89,14 @@ handle_call({encode_data, Data}, _From, #state{tls_ref = TlsSock} = State) ->
 handle_call({decode_data, TlsData}, _From, #state{tls_ref = TlsSock} = State) ->
     {reply, erltls_nif:ssl_feed_data(TlsSock, TlsData), State};
 
-handle_call(get_options, _From, #state{emulated_opts = EmulatedOpts, tls_opts = TlsOpts} = State) ->
-    {reply, {ok, TlsOpts, EmulatedOpts}, State};
+handle_call(get_options, _From, #state{emul_opts = EmulatedOpts, tls_opts = TlsOpts} = State) ->
+    {reply, {ok, TlsOpts, erltls_options:emulated_record2list(EmulatedOpts)}, State};
+
+handle_call({get_emulated_options, OptionNames}, _From, #state{emul_opts = EmulatedOpts} = State) ->
+    {reply, {ok, erltls_options:emulated_by_names(OptionNames, EmulatedOpts)}, State};
+
+handle_call({set_emulated_options, Opts}, _From, #state{emul_opts = EmulatedOps} = State) ->
+    {reply, ok, State#state{emul_opts = erltls_options:emulated_list2record(Opts, EmulatedOps)}};
 
 handle_call({controlling_process, SenderPid, NewOwner}, _From, State) ->
     #state{owner_pid = OwnerPid, owner_monitor_ref = OwnerMonitRef} = State,
@@ -241,7 +257,7 @@ start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, HkCompleted) ->
         tls_ref = TlsSock,
         owner_pid = self(),
         hk_completed = HkCompleted,
-        emulated_opts = EmulatedOpts,
+        emul_opts = erltls_options:emulated_list2record(EmulatedOpts),
         tls_opts = TlsOpts
     },
 

@@ -3,6 +3,7 @@
 %socket ref
 
 -record(tlssocket, {tcp_sock, ssl_pid}).
+-record(emulated_opts, {packet =0, packet_size = 0, header = 0}).
 
 -type tls_option()::
     {verify, verify_type()} |

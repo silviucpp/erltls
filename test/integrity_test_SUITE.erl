@@ -12,10 +12,12 @@ all() -> [
 
 groups() -> [
     {erltls_group, [sequence], [
+        test_options,
         test_context,
         test_clear_pem_cache,
         test_cipher_suites,
         test_connect_complete,
+        test_get_set_opts,
         test_handshake_failed,
         test_owner_died,
         test_owner_change,
@@ -35,6 +37,49 @@ init_per_suite(Config) ->
 
 end_per_suite(_Config) ->
     ok = erltls:stop().
+
+test_options(_Config) ->
+    CertFile = "test/server.pem",
+    ReuseAddr = true,
+    Packet = 0,
+
+    Opts1 = [
+        {certfile, CertFile},
+        {reuseaddr, ReuseAddr},
+        {packet, Packet}
+    ],
+
+    {ok, [{reuseaddr, ReuseAddr}], [{certfile, CertFile}], [{packet, Packet}]} = erltls_options:get_options(Opts1),
+
+    {ok, [reuseaddr], [header,packet_size,packet]} = erltls_options:get_inet_names([reuseaddr, packet, packet_size, header]),
+
+    {error,{options,{packet, "ss"}}} = erltls_options:get_options([{packet, "ss"}]),
+    {error,{options,{packet_size, "ss"}}} = erltls_options:get_options([{packet_size, "ss"}]),
+    {error,{options,{header, "ss"}}} = erltls_options:get_options([{header, "ss"}]),
+
+    {error,{options,{packet, "ss"}}} = erltls_options:get_inet_options([{packet, "ss"}]),
+    {error,{options,{packet_size, "ss"}}} = erltls_options:get_inet_options([{packet_size, "ss"}]),
+    {error,{options,{header, "ss"}}} = erltls_options:get_inet_options([{header, "ss"}]),
+
+    OptsEmulated = [
+        {packet, 1},
+        {packet_size, 2},
+        {header, 0}
+    ],
+
+    {ok, [], OptsEmulated1} = erltls_options:get_inet_options(OptsEmulated),
+
+    3 = length(OptsEmulated1),
+    1 = erltls_utils:lookup(packet, OptsEmulated1),
+    2 = erltls_utils:lookup(packet_size, OptsEmulated1),
+    0 = erltls_utils:lookup(header, OptsEmulated1),
+
+    R1 = erltls_options:emulated_list2record(OptsEmulated),
+    #emulated_opts {packet = 1, packet_size = 2, header = 0} = R1,
+    #emulated_opts {packet = 4, packet_size = 2, header = 0} = erltls_options:emulated_list2record([{packet, 4}], R1),
+    OptsEmulated = erltls_options:emulated_record2list(R1),
+    [{packet, 1}] = erltls_options:emulated_by_names([packet], R1),
+    true.
 
 test_context(_Config) ->
     {error, missing_certificate} = erltls_manager:get_ctx(null, null, null, null),
@@ -73,6 +118,28 @@ test_connect_complete(_Config) ->
     true = is_process_alive(Socket#tlssocket.ssl_pid),
     ok = erltls:close(Socket),
     false = is_process_alive(Socket#tlssocket.ssl_pid),
+    true.
+
+test_get_set_opts(_Config) ->
+    DefaultOpts = [
+        binary,
+        {packet, 0},
+        {active, 1},
+        {ciphers, ["AES128-GCM-SHA256"]},
+        {verify, verify_none},
+        {compression, compression_none}
+    ],
+
+    {ok, Socket} = erltls:connect("status.github.com", 443, DefaultOpts),
+    ok = erltls:setopts(Socket, [list, {active, 0}, {packet, 2}]),
+    {error,{options,{packet, "ss"}}} = erltls:setopts(Socket, [list, {active, 0}, {packet, "ss"}]),
+    {ok, Opts} = erltls:getopts(Socket, [active, packet, packet_size, header]),
+    4 = length(Opts),
+    1 = erltls_utils:lookup(active, Opts),
+    2 = erltls_utils:lookup(packet, Opts),
+    0 = erltls_utils:lookup(packet_size, Opts),
+    0 = erltls_utils:lookup(header, Opts),
+    ok = erltls:close(Socket),
     true.
 
 test_handshake_failed(_Config) ->
