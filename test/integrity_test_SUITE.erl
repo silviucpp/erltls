@@ -82,16 +82,16 @@ test_options(_Config) ->
     true.
 
 test_context(_Config) ->
-    {error, missing_certificate} = erltls_manager:get_ctx(null, null, null, null),
-    {ok, Ctx1} = erltls_manager:get_ctx(get_certificate(), null, null, null),
-    {ok, Ctx2} = erltls_manager:get_ctx(get_certificate(), null, null, null),
-    {ok, _} = erltls_manager:get_ctx(get_certificate(), ["AES128-GCM-SHA256"], null, null),
+    {error, missing_certificate} = erltls_manager:get_context([]),
+    {ok, Ctx1} = erltls_manager:get_context([{certfile, get_certificate()}]),
+    {ok, Ctx2} = erltls_manager:get_context([{certfile, get_certificate()}]),
+    {ok, _} = erltls_manager:get_context([{certfile, get_certificate()}, {ciphers, ["AES128-GCM-SHA256"]}]),
     Ctx1 =:= Ctx2.
 
 test_clear_pem_cache(_Config) ->
-    {ok, Ctx1} = erltls_manager:get_ctx(get_certificate(), ["AES128-GCM-SHA256"], null, null),
+    {ok, Ctx1} = erltls_manager:get_context([{certfile, get_certificate()}, {ciphers, ["AES128-GCM-SHA256"]}]),
     ok = erltls:clear_pem_cache(),
-    {ok, Ctx2} = erltls_manager:get_ctx(get_certificate(), ["AES128-GCM-SHA256"], null, null),
+    {ok, Ctx2} = erltls_manager:get_context([{certfile, get_certificate()}, {ciphers, ["AES128-GCM-SHA256"]}]),
     Ctx1 =/= Ctx2.
 
 test_cipher_suites(_Config) ->

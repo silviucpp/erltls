@@ -58,7 +58,7 @@ stop() ->
     application:stop(erltls).
 
 cipher_suites() ->
-    case erltls_manager:get_ctx(null, null, null, null, false) of
+    case erltls_manager:get_context([], false) of
         {ok, Ctx} ->
             erltls_nif:ciphers(Ctx);
         _ ->

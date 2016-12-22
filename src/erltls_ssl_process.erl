@@ -37,7 +37,7 @@
 ]).
 
 new(TcpSocket, TlsOptions, EmulatedOpts, Role) ->
-    case get_context(TlsOptions, Role) of
+    case erltls_manager:get_context(TlsOptions, mandatory_cert(Role)) of
         {ok, Context} ->
             case erltls_nif:ssl_new(Context, Role, get_ssl_flags(TlsOptions)) of
                 {ok, TlsSock} ->
@@ -217,22 +217,10 @@ get_compression(compression_none) ->
 get_compression(_) ->
     0.
 
-get_ciphers(null) ->
-    null;
-get_ciphers(Ciphers) when is_list(Ciphers) ->
-    string:join(Ciphers, ":").
-
 get_ssl_flags(Options) ->
     VerifyType = get_verify(erltls_utils:lookup(verify, Options)),
     CompressionType = get_compression(erltls_utils:lookup(compression, Options)),
     VerifyType bor CompressionType.
-
-get_context(TlsOptions, Role) ->
-    CertFile = erltls_utils:lookup(certfile, TlsOptions),
-    DhFile = erltls_utils:lookup(dhfile, TlsOptions),
-    CaFile = erltls_utils:lookup(cacerts, TlsOptions),
-    Ciphers = get_ciphers(erltls_utils:lookup(ciphers, TlsOptions)),
-    erltls_manager:get_ctx(CertFile, Ciphers, DhFile, CaFile, mandatory_cert(Role)).
 
 get_ssl_process(?SSL_ROLE_SERVER, TcpSocket, TlsSock, TlsOpts, EmulatedOpts) ->
     start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, false);

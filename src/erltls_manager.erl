@@ -5,7 +5,7 @@
 
 -export([start_link/0, init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
--export([get_ctx/4, get_ctx/5, clear_cache/0]).
+-export([get_context/1, get_context/2, clear_cache/0]).
 
 -define(SERVER, ?MODULE).
 -define(ETS_SSL_CONTEXT, etls_ssl_context_table).
@@ -15,14 +15,20 @@
 start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
-get_ctx(CertFile, Ciphers, DhFile, CaFile) ->
-    get_ctx(CertFile, Ciphers, DhFile, CaFile, true).
+get_context(TlsOpts) ->
+    get_context(TlsOpts, true).
 
-get_ctx(CertFile, Ciphers, DhFile, CaFile, MandatoryCertificate) ->
+get_context(TlsOptions, MandatoryCertificate) ->
+    CertFile = erltls_utils:lookup(certfile, TlsOptions),
+
     case missing_cert(CertFile, MandatoryCertificate) of
         true ->
             {error, missing_certificate};
         _ ->
+            DhFile = erltls_utils:lookup(dhfile, TlsOptions),
+            CaFile = erltls_utils:lookup(cacerts, TlsOptions),
+            Ciphers = get_ciphers(erltls_utils:lookup(ciphers, TlsOptions)),
+
             CtxKey = get_ctx_Key(CertFile, Ciphers, DhFile, CaFile),
             case ets_get(CtxKey) of
                 null ->
@@ -98,3 +104,8 @@ missing_cert(Cert, true) when is_binary(Cert) ->
     byte_size(Cert) =:= 0;
 missing_cert(_, true) ->
     true.
+
+get_ciphers(null) ->
+    null;
+get_ciphers(Ciphers) when is_list(Ciphers) ->
+    string:join(Ciphers, ":").
