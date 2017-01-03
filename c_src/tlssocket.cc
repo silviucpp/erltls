@@ -93,7 +93,7 @@ ERL_NIF_TERM TlsSocket::Shutdown(ErlNifEnv* env)
     return SendPending(env);
 }
 
-ERL_NIF_TERM TlsSocket::FeedData(ErlNifEnv* env, const ErlNifBinary* bin, bool use_binary)
+ERL_NIF_TERM TlsSocket::FeedData(ErlNifEnv* env, const ErlNifBinary* bin)
 {
     if(!ssl_)
         return make_error(env, ATOMS.atomSslNotStarted);
@@ -106,7 +106,7 @@ ERL_NIF_TERM TlsSocket::FeedData(ErlNifEnv* env, const ErlNifBinary* bin, bool u
     if (!SSL_is_init_finished(ssl_))
         return ATOMS.atomOk;
     
-    return DoReadOp(env, use_binary);
+    return DoReadOp(env);
 }
 
 ERL_NIF_TERM TlsSocket::SendData(ErlNifEnv* env, const ErlNifBinary* bin)
@@ -135,7 +135,7 @@ ERL_NIF_TERM TlsSocket::Handshake(ErlNifEnv* env)
     return make_ok_result(env, enif_make_int(env, result));
 }
 
-ERL_NIF_TERM TlsSocket::DoReadOp(ErlNifEnv* env, bool use_binary)
+ERL_NIF_TERM TlsSocket::DoReadOp(ErlNifEnv* env)
 {
     assert(ssl_);
     
@@ -157,14 +157,7 @@ ERL_NIF_TERM TlsSocket::DoReadOp(ErlNifEnv* env, bool use_binary)
         }
     }
     
-    ERL_NIF_TERM term;
-    
-    if(use_binary)
-        term = make_binary(env, buff.Data(), buff.Length());
-    else
-        term = enif_make_string_len(env, reinterpret_cast<const char*>(buff.Data()), buff.Length(), ERL_NIF_LATIN1);
-    
-    return make_ok_result(env, term);
+    return make_ok_result(env, make_binary(env, buff.Data(), buff.Length()));
 }
 
 ERL_NIF_TERM TlsSocket::SendPending(ErlNifEnv* env)

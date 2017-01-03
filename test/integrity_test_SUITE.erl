@@ -64,20 +64,23 @@ test_options(_Config) ->
     OptsEmulated = [
         {packet, 1},
         {packet_size, 2},
-        {header, 0}
+        {header, 0},
+        binary
     ],
 
-    {ok, [], OptsEmulated1} = erltls_options:get_inet_options(OptsEmulated),
+    {ok, [], OptsEmulated0} = erltls_options:get_inet_options(OptsEmulated),
+    OptsEmulated1 = lists:reverse(OptsEmulated0),
 
-    3 = length(OptsEmulated1),
+    4 = length(OptsEmulated1),
     1 = erltls_utils:lookup(packet, OptsEmulated1),
     2 = erltls_utils:lookup(packet_size, OptsEmulated1),
     0 = erltls_utils:lookup(header, OptsEmulated1),
+    binary = erltls_utils:lookup(mode, OptsEmulated1),
 
-    R1 = erltls_options:emulated_list2record(OptsEmulated),
-    #emulated_opts {packet = 1, packet_size = 2, header = 0} = R1,
-    #emulated_opts {packet = 4, packet_size = 2, header = 0} = erltls_options:emulated_list2record([{packet, 4}], R1),
-    OptsEmulated = erltls_options:emulated_record2list(R1),
+    R1 = erltls_options:emulated_list2record(OptsEmulated1),
+    #emulated_opts {packet = 1, packet_size = 2, header = 0, mode = binary} = R1,
+    #emulated_opts {packet = 4, packet_size = 2, header = 0, mode = binary} = erltls_options:emulated_list2record([{packet, 4}], R1),
+    OptsEmulated1 = erltls_options:emulated_record2list(R1),
     [{packet, 1}] = erltls_options:emulated_by_names([packet], R1),
     true.
 

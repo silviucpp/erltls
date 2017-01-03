@@ -8,6 +8,7 @@
     get_inet_options/1,
     get_options/1,
     default_emulated/0,
+    default_inet_options/0,
     emulated_list2record/1,
     emulated_list2record/2,
     emulated_record2list/1,
@@ -30,7 +31,7 @@ get_inet_names([], InetNames, EmulatedNames) ->
 
 get_inet_options(Opt) ->
     try
-        get_inet_options(Opt, [], [])
+        get_inet_options(normalize_options(Opt), [], [])
     catch
         _:Error ->
             Error
@@ -52,7 +53,7 @@ get_inet_options([], TcpOpt, EmulatedOpt) ->
 
 get_options(Options) ->
     try
-        get_options(Options, [], [], [])
+        get_options(normalize_options(Options), [], [], [])
     catch
         _:Error ->
             Error
@@ -99,6 +100,8 @@ is_tls_option(Key) ->
         log_alert, server_name_indication, sni_hosts, sni_fun
     ]).
 
+is_emulated_option(mode) ->
+    true;
 is_emulated_option(header) ->
     true;
 is_emulated_option(packet) ->
@@ -120,6 +123,14 @@ validate_emulated_option(_, _) ->
 default_emulated() -> [
     {packet, 0},
     {packet_size, 0},
+    {header, 0},
+    {mode, list}
+].
+
+default_inet_options() -> [
+    {mode, binary},
+    {packet, 0},
+    {packet_size, 0},
     {header, 0}
 ].
 
@@ -133,15 +144,18 @@ emulated_list2record([{K, V} | T], Rc) ->
         packet_size ->
             emulated_list2record(T, Rc#emulated_opts{packet_size = V});
         header ->
-            emulated_list2record(T, Rc#emulated_opts{header = V})
+            emulated_list2record(T, Rc#emulated_opts{header = V});
+        mode ->
+            emulated_list2record(T, Rc#emulated_opts{mode = V})
     end;
 emulated_list2record([], Rc) ->
     Rc.
 
-emulated_record2list(#emulated_opts{packet = Packet, packet_size = PkSize, header = Header}) -> [
+emulated_record2list(#emulated_opts{packet = Packet, packet_size = PkSize, header = Header, mode = Mode}) -> [
     {packet, Packet},
     {packet_size, PkSize},
-    {header, Header}
+    {header, Header},
+    {mode, Mode}
 ].
 
 emulated_by_names(Names, Emul) ->
@@ -154,7 +168,9 @@ emulated_by_names([H|T], Emul, Acc) ->
         packet_size ->
             emulated_by_names(T, Emul, [{packet_size, Emul#emulated_opts.packet_size} | Acc]);
         header ->
-            emulated_by_names(T, Emul, [{header, Emul#emulated_opts.header} | Acc])
+            emulated_by_names(T, Emul, [{header, Emul#emulated_opts.header} | Acc]);
+        mode ->
+            emulated_by_names(T, Emul, [{mode, Emul#emulated_opts.mode} | Acc])
     end;
 emulated_by_names([], _Emul, Acc) ->
     Acc.
@@ -165,3 +181,11 @@ use_session_ticket(UseSessionKey) when is_boolean(UseSessionKey) ->
     UseSessionKey;
 use_session_ticket(_) ->
     false.
+
+normalize_options(Options) ->
+    try
+        proplists:expand([{binary, [{mode, binary}]}, {list, [{mode, list}]}], Options)
+    catch
+        _:_ ->
+            throw({error, {options, {not_a_proplist, Options}}})
+    end.

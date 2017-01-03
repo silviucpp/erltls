@@ -25,7 +25,7 @@ public:
     ERL_NIF_TERM Handshake(ErlNifEnv *env);
     ERL_NIF_TERM SendPending(ErlNifEnv *env);
     
-    ERL_NIF_TERM FeedData(ErlNifEnv *env, const ErlNifBinary* bin, bool use_binary);
+    ERL_NIF_TERM FeedData(ErlNifEnv *env, const ErlNifBinary* bin);
     ERL_NIF_TERM SendData(ErlNifEnv *env, const ErlNifBinary* bin);
 
     ERL_NIF_TERM IsSessionReused(ErlNifEnv *env);
@@ -39,7 +39,7 @@ private:
     
     ERL_NIF_TERM SendPendingAsync(ErlNifEnv *env);
     ERL_NIF_TERM DoHandshakeOp(ErlNifEnv *env);
-    ERL_NIF_TERM DoReadOp(ErlNifEnv *env, bool use_binary);
+    ERL_NIF_TERM DoReadOp(ErlNifEnv *env);
     
     BIO* bio_read_;
     BIO* bio_write_;

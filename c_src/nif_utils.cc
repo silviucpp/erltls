@@ -46,18 +46,10 @@ ERL_NIF_TERM make_ok_result(ErlNifEnv* env, ERL_NIF_TERM term)
     return enif_make_tuple(env, 2, ATOMS.atomOk, term);
 }
 
-bool get_binary(ErlNifEnv* env, ERL_NIF_TERM term, ErlNifBinary* bin, bool* is_binary)
+bool get_binary(ErlNifEnv* env, ERL_NIF_TERM term, ErlNifBinary* bin)
 {
     if(enif_is_binary(env, term))
-    {
-        if(is_binary)
-            *is_binary = true;
-
         return enif_inspect_binary(env, term, bin);
-    }
-
-    if (is_binary)
-        *is_binary = false;
 
     return enif_inspect_iolist_as_binary(env, term, bin);
 }

@@ -99,8 +99,14 @@ init(#state{tcp = TcpSocket} = State) ->
 handle_call({encode_data, Data}, _From, #state{tls_ref = TlsSock} = State) ->
     {reply, erltls_nif:ssl_send_data(TlsSock, Data), State};
 
-handle_call({decode_data, TlsData}, _From, #state{tls_ref = TlsSock} = State) ->
-    {reply, erltls_nif:ssl_feed_data(TlsSock, TlsData), State};
+handle_call({decode_data, TlsData}, _From, #state{tls_ref = TlsSock, emul_opts = EmulOpts} = State) ->
+    Response = case erltls_nif:ssl_feed_data(TlsSock, TlsData) of
+        {ok, Data} ->
+            {ok, convert_data(EmulOpts#emulated_opts.mode, Data)};
+        Error ->
+            Error
+    end,
+    {reply, Response, State};
 
 handle_call(get_options, _From, #state{emul_opts = EmulatedOpts, tls_opts = TlsOpts} = State) ->
     {reply, {ok, TlsOpts, erltls_options:emulated_record2list(EmulatedOpts)}, State};
@@ -169,10 +175,10 @@ handle_cast(Request, State) ->
     ?ERROR_MSG("handle_cast unknown request: ~p", [Request]),
     {noreply, State}.
 
-handle_info({tcp, TcpSocket, TlsData}, #state{tcp = TcpSocket, tls_ref = TlsRef, owner_pid = Pid, socket_ref = SockRef} = State) ->
+handle_info({tcp, TcpSocket, TlsData}, #state{tcp = TcpSocket, tls_ref = TlsRef, owner_pid = Pid, socket_ref = SockRef, emul_opts = EmOpt} = State) ->
     case erltls_nif:ssl_feed_data(TlsRef, TlsData) of
         {ok, RawData} ->
-            Pid ! {ssl, SockRef, RawData};
+            Pid ! {ssl, SockRef, convert_data(EmOpt#emulated_opts.mode, RawData)};
         Error ->
             Pid ! {ssl_error, SockRef, Error}
     end,
@@ -349,3 +355,8 @@ mandatory_cert(?SSL_ROLE_SERVER) ->
     true;
 mandatory_cert(?SSL_ROLE_CLIENT) ->
     false.
+
+convert_data(binary, Data) ->
+    Data;
+convert_data(list, Data) ->
+    binary_to_list(Data).

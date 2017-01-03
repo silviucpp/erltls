@@ -109,15 +109,14 @@ ERL_NIF_TERM enif_ssl_socket_feed_data(ErlNifEnv* env, int argc, const ERL_NIF_T
     
     enif_ssl_socket* wp = NULL;
     ErlNifBinary bin;
-    bool is_binary;
     
     if(!enif_get_resource(env, argv[0], data->res_ssl_sock, (void**) &wp))
         return make_badarg(env);
     
-    if(!get_binary(env, argv[1], &bin, &is_binary))
+    if(!get_binary(env, argv[1], &bin))
         return make_badarg(env);
     
-    return wp->socket->FeedData(env, &bin, is_binary);
+    return wp->socket->FeedData(env, &bin);
 }
 
 ERL_NIF_TERM enif_ssl_socket_send_data(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])

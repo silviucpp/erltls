@@ -85,14 +85,21 @@ connect(Socket, TlsOpt) ->
 
 connect(Socket, TlsOpt, _Timeout) when is_port(Socket) ->
     %todo: implement timeout in this case
-    case erltls_options:get_options(TlsOpt) of
-        {ok, [], TlsOpt, []} ->
-            do_connect(Socket, TlsOpt, erltls_options:default_emulated());
-        {ok, TcpOpt, _TlsOpt, EmulatedOpt} ->
-            {error, {options, TcpOpt ++ EmulatedOpt}};
+
+    case inet:setopts(Socket, erltls_options:default_inet_options()) of
+        ok ->
+            case erltls_options:get_options(TlsOpt) of
+                {ok, [], TlsOpt, []} ->
+                    do_connect(Socket, TlsOpt, erltls_options:default_emulated());
+                {ok, TcpOpt, _TlsOpt, EmulatedOpt} ->
+                    {error, {options, TcpOpt ++ EmulatedOpt}};
+                Error ->
+                    Error
+            end;
         Error ->
             Error
     end;
+
 connect(Host, Port, Options) ->
     connect(Host, Port, Options, infinity).
 
@@ -102,7 +109,7 @@ connect(Host, Port, Options) ->
 connect(Host, Port, Options, Timeout) ->
     case erltls_options:get_options(Options) of
         {ok, TcpOpt, TlsOpt, EmulatedOpts} ->
-            case gen_tcp:connect(Host, Port, TcpOpt, Timeout) of
+            case gen_tcp:connect(Host, Port, TcpOpt ++ erltls_options:default_inet_options(), Timeout) of
                 {ok, TcpSocket} ->
                     do_connect(TcpSocket, TlsOpt, EmulatedOpts);
                 Error ->
@@ -194,7 +201,7 @@ session_reused(#tlssocket{ssl_pid = Pid}) ->
 listen(Port, Options) ->
     case erltls_options:get_options(Options) of
         {ok, TcpOpt, TlsOpt, EmulatedOpt} ->
-            case gen_tcp:listen(Port, TcpOpt) of
+            case gen_tcp:listen(Port, TcpOpt ++ erltls_options:default_inet_options()) of
                 {ok, TcpSocket} ->
                     erltls_ssl_process:new(TcpSocket, TlsOpt, EmulatedOpt, ?SSL_ROLE_SERVER);
                 Error ->
