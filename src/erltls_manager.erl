@@ -27,10 +27,10 @@ get_context(TlsOptions, MandatoryCertificate) ->
             {error, missing_certificate};
         _ ->
             ContextHash = get_context_hash(TlsOptions),
-            case ets_get(ContextHash) of
+            case erltls_utils:ets_get(?ETS_SSL_CONTEXT, ContextHash) of
                 null ->
                     gen_server:call(?MODULE, {get_context, ContextHash, TlsOptions});
-                Context ->
+                {ok, Context} ->
                     {ok, Context}
             end
     end.
@@ -43,19 +43,19 @@ init([]) ->
     {ok, #state{}}.
 
 handle_call({get_context, ContextHash, TlsOptions0}, _From, State) ->
-    Result = case ets_get(ContextHash) of
+    Result = case erltls_utils:ets_get(?ETS_SSL_CONTEXT, ContextHash) of
         null ->
             Ciphers = get_ciphers(erltls_utils:lookup(ciphers, TlsOptions0)),
             TlsOptions = [{ciphers, Ciphers} | erltls_utils:delete(ciphers, TlsOptions0)],
 
             case erltls_nif:new_context(TlsOptions) of
                 {ok, Context} ->
-                    true = ets_set(ContextHash, Context),
+                    true = erltls_utils:ets_set(?ETS_SSL_CONTEXT, ContextHash, Context),
                     {ok, Context};
                 Error ->
                     Error
             end;
-        Context ->
+        {ok, Context} ->
             {ok, Context}
     end,
     {reply, Result, State};
@@ -78,22 +78,11 @@ code_change(_OldVsn, State, _Extra) ->
 
 %internals
 
-ets_set(Identifier, Query) ->
-    ets:insert(?ETS_SSL_CONTEXT, {Identifier, Query}).
-
-ets_get(Identifier) ->
-    case ets:lookup(?ETS_SSL_CONTEXT, Identifier) of
-        [{Identifier, Context}] ->
-            Context;
-        [] ->
-            null
-    end.
-
 get_context_hash([]) ->
     <<"default">>;
-get_context_hash(Options0) ->
-    ValuesBin = lists:foldl(fun({_K, V}, Acc) -> [erltls_utils:to_bin(V) | Acc] end, [], lists:keysort(1, Options0)),
-    list_to_binary(ValuesBin).
+get_context_hash(Options) ->
+    ValuesBin = lists:foldl(fun({_K, V}, Acc) -> [erltls_utils:to_bin(V) | Acc] end, [], lists:keysort(1, Options)),
+    xxhash:hash64(ValuesBin).
 
 missing_cert(_, false) ->
     false;

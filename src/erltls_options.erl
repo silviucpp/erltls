@@ -11,7 +11,8 @@
     emulated_list2record/1,
     emulated_list2record/2,
     emulated_record2list/1,
-    emulated_by_names/2
+    emulated_by_names/2,
+    use_session_ticket/1
 ]).
 
 get_inet_names(Opt) ->
@@ -62,6 +63,7 @@ get_options([H|T], TcpOpt, TlsOpt, EmulatedOpt) ->
 
     case is_tls_option(OptionKey) of
         true ->
+            %todo: validation for tls options are in nif. write tests for them
             get_options(T, TcpOpt, [H|TlsOpt], EmulatedOpt);
         _ ->
             case is_emulated_option(OptionKey) of
@@ -85,9 +87,11 @@ get_option_key(El) when is_tuple(El) ->
 
 is_tls_option(Key) ->
     lists:member(Key, [
-        certfile, dhfile, cacerts, ciphers, verify, compression,
-        % not implemented.
-        % todo: implement the following methods
+        %options available in both ssl and erltls
+        certfile, dhfile, cacerts, ciphers, verify,
+        %options available only in erltls
+        compression, use_session_ticket, reuse_sessions_ttl,
+        % todo: implement the following options:
         verify_fun, fail_if_no_peer_cert, depts, cert, key, keyfile, password,
         cacertfile, dh, user_lookup_fun, psk_identity, srp_identity, ssl_imp,
         hibernate_after, reuse_sessions, reuse_session, alpn_advertised_protocols,
@@ -154,3 +158,10 @@ emulated_by_names([H|T], Emul, Acc) ->
     end;
 emulated_by_names([], _Emul, Acc) ->
     Acc.
+
+use_session_ticket({UseSessionKey, _Key}) when is_boolean(UseSessionKey) ->
+    UseSessionKey;
+use_session_ticket(UseSessionKey) when is_boolean(UseSessionKey) ->
+    UseSessionKey;
+use_session_ticket(_) ->
+    false.

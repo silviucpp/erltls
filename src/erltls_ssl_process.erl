@@ -5,8 +5,9 @@
 
 -behaviour(gen_server).
 
--define(VERIFY_NONE, 16#10000).
--define(COMPRESSION_NONE, 16#100000).
+-define(VERIFY_NONE, 1).
+-define(COMPRESSION_NONE, 2).
+-define(SESSION_TICKET, 4).
 
 -define(SERVER, ?MODULE).
 
@@ -26,6 +27,7 @@
 
 -export([
     new/4,
+    new/5,
     get_options/1,
     get_emulated_options/2,
     set_emulated_options/2,
@@ -33,13 +35,18 @@
     handshake/2,
     encode_data/2,
     decode_data/2,
-    shutdown/1
+    shutdown/1,
+    session_reused/1,
+    get_session_asn1/1
 ]).
 
 new(TcpSocket, TlsOptions, EmulatedOpts, Role) ->
+    new(TcpSocket, TlsOptions, EmulatedOpts, Role, <<>>).
+
+new(TcpSocket, TlsOptions, EmulatedOpts, Role, CachedSession) ->
     case erltls_manager:get_context(TlsOptions, mandatory_cert(Role)) of
         {ok, Context} ->
-            case erltls_nif:ssl_new(Context, Role, get_ssl_flags(TlsOptions)) of
+            case erltls_nif:ssl_new(Context, Role, get_ssl_flags(TlsOptions), CachedSession) of
                 {ok, TlsSock} ->
                     get_ssl_process(Role, TcpSocket, TlsSock, TlsOptions, EmulatedOpts);
                 Error ->
@@ -71,6 +78,12 @@ encode_data(Pid, Data) ->
 
 decode_data(Pid, Data) ->
     call(Pid, {decode_data, Data}).
+
+session_reused(Pid) ->
+    call(Pid, session_reused).
+
+get_session_asn1(Pid) ->
+    call(Pid, get_session_asn1).
 
 shutdown(Pid) ->
     call(Pid, shutdown).
@@ -135,6 +148,12 @@ handle_call({handshake, TcpSocket}, _From, #state{tls_ref = TlsSock} = State) ->
                     Error
             end
     end;
+
+handle_call(get_session_asn1, _From, #state{tls_ref = TlsRef} = State) ->
+    {reply, erltls_nif:ssl_get_session_asn1(TlsRef), State};
+
+handle_call(session_reused, _From, #state{tls_ref = TlsRef} = State) ->
+    {reply, erltls_nif:ssl_session_reused(TlsRef), State};
 
 handle_call(shutdown, _From, #state{tcp = TcpSocket, tls_ref = TlsRef} = State) ->
     {stop, normal, shutdown_ssl(TcpSocket, TlsRef), State};
@@ -217,10 +236,16 @@ get_compression(compression_none) ->
 get_compression(_) ->
     0.
 
+get_session_ticket(true) ->
+    ?SESSION_TICKET;
+get_session_ticket(_) ->
+    0.
+
 get_ssl_flags(Options) ->
     VerifyType = get_verify(erltls_utils:lookup(verify, Options)),
     CompressionType = get_compression(erltls_utils:lookup(compression, Options)),
-    VerifyType bor CompressionType.
+    UseSessionTicket = get_session_ticket(erltls_options:use_session_ticket(erltls_utils:lookup(use_session_ticket, Options))),
+    VerifyType bor CompressionType bor UseSessionTicket.
 
 get_ssl_process(?SSL_ROLE_SERVER, TcpSocket, TlsSock, TlsOpts, EmulatedOpts) ->
     start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, false);

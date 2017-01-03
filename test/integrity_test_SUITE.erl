@@ -131,6 +131,7 @@ test_get_set_opts(_Config) ->
     ],
 
     {ok, Socket} = erltls:connect("status.github.com", 443, DefaultOpts),
+    false = erltls:session_reused(Socket),
     ok = erltls:setopts(Socket, [list, {active, 0}, {packet, 2}]),
     {error,{options,{packet, "ss"}}} = erltls:setopts(Socket, [list, {active, 0}, {packet, "ss"}]),
     {ok, Opts} = erltls:getopts(Socket, [active, packet, packet_size, header]),

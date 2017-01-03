@@ -25,6 +25,7 @@
     getstat/2,
     peername/1,
     sockname/1,
+    session_reused/1,
     listen/2,
     transport_accept/1,
     transport_accept/2,
@@ -76,17 +77,17 @@ clear_pem_cache() ->
 -spec connect(port(), [connect_option()]) ->
     {ok, tlssocket()} | {error, reason()}.
 
-connect(Socket, SslOptions) ->
-    connect(Socket, SslOptions, infinity).
+connect(Socket, TlsOpt) ->
+    connect(Socket, TlsOpt, infinity).
 
 -spec connect(port() | host(), [connect_option()] | inet:port_number(), timeout() | list()) ->
     {ok, tlssocket()} | {error, reason()}.
 
-connect(Socket, SslOptions, _Timeout) when is_port(Socket) ->
+connect(Socket, TlsOpt, _Timeout) when is_port(Socket) ->
     %todo: implement timeout in this case
-    case erltls_options:get_options(SslOptions) of
+    case erltls_options:get_options(TlsOpt) of
         {ok, [], TlsOpt, []} ->
-            erltls_ssl_process:new(Socket, TlsOpt, erltls_options:default_emulated(), ?SSL_ROLE_CLIENT);
+            do_connect(Socket, TlsOpt, erltls_options:default_emulated());
         {ok, TcpOpt, _TlsOpt, EmulatedOpt} ->
             {error, {options, TcpOpt ++ EmulatedOpt}};
         Error ->
@@ -103,7 +104,7 @@ connect(Host, Port, Options, Timeout) ->
         {ok, TcpOpt, TlsOpt, EmulatedOpts} ->
             case gen_tcp:connect(Host, Port, TcpOpt, Timeout) of
                 {ok, TcpSocket} ->
-                    erltls_ssl_process:new(TcpSocket, TlsOpt, EmulatedOpts, ?SSL_ROLE_CLIENT);
+                    do_connect(TcpSocket, TlsOpt, EmulatedOpts);
                 Error ->
                     Error
             end;
@@ -181,6 +182,11 @@ peername(#tlssocket{tcp_sock = TcpSock}) ->
 
 sockname(#tlssocket{tcp_sock = TcpSock}) ->
     inet:sockname(TcpSock).
+
+-spec session_reused(tlssocket()) -> boolean() | {error, reason()}.
+
+session_reused(#tlssocket{ssl_pid = Pid}) ->
+    erltls_ssl_process:session_reused(Pid).
 
 -spec listen(inet:port_number(), [listen_option()]) ->
     {ok, tlssocket()} | {error, reason()}.
@@ -298,3 +304,51 @@ set_inet_opts(_TcpSock, []) ->
     ok;
 set_inet_opts(TcpSock, Options) ->
     inet:setopts(TcpSock, Options).
+
+do_connect(TcpSocket, TlsOpt, EmulatedOpts) ->
+    UseSessionTicket = erltls_options:use_session_ticket(erltls_utils:lookup(use_session_ticket, TlsOpt)),
+
+    case get_session_ticket(UseSessionTicket, TcpSocket) of
+        {ok, SessionAsn1, Host, Port} ->
+            case erltls_ssl_process:new(TcpSocket, TlsOpt, EmulatedOpts, ?SSL_ROLE_CLIENT, SessionAsn1) of
+                {ok, #tlssocket{ssl_pid = Pid} = TlsSocketRef} ->
+                    update_session_ticket(UseSessionTicket, Host, Port, Pid),
+                    {ok, TlsSocketRef};
+                Error ->
+                    Error
+            end;
+        Error ->
+            Error
+    end.
+
+get_session_ticket(true, Socket) ->
+    case inet:peername(Socket) of
+        {ok, {Host, Port}} ->
+            case erltls_ticket_cache:get(Host, Port) of
+                null ->
+                    {ok, <<>>, Host, Port};
+                {ok, SessionAsn1} ->
+                    {ok, SessionAsn1, Host, Port};
+                Resp ->
+                    Resp
+            end;
+        Error ->
+            Error
+    end;
+get_session_ticket(_, _Socket) ->
+    {ok, <<>>, undefined, undefined}.
+
+update_session_ticket(true, Host, Port, TlsRef) ->
+    case erltls_ssl_process:get_session_asn1(TlsRef) of
+        {ok, HasTicket, SessionAsn1} ->
+            case HasTicket of
+                true ->
+                    erltls_ticket_cache:set(Host, Port, SessionAsn1);
+                _ ->
+                    true
+            end;
+        Error ->
+            Error
+    end;
+update_session_ticket(_, _Host, _Port, _TlsRef) ->
+    true.

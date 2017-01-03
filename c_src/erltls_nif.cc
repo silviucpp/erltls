@@ -6,13 +6,20 @@
 #include "tlsmanager.h"
 
 const char kAtomOk[] = "ok";
+const char kAtomTrue[] = "true";
+const char kAtomFalse[] = "false";
 const char kAtomError[] = "error";
-const char kAtomSllNotStarted[] = "ssl_not_started";
 const char kAtomBadArg[] = "badarg";
+const char kAtomOptions[] = "options";
+
+const char kAtomSllNotStarted[] = "ssl_not_started";
+
 const char kAtomCtxCertfile[] = "certfile";
 const char kAtomCtxDhfile[] = "dhfile";
 const char kAtomCtxCacerts[] = "cacerts";
 const char kAtomCtxCiphers[] = "ciphers";
+const char kAtomCtxReuseSessionsTtl[] = "reuse_sessions_ttl";
+const char kAtomCtxUseSessionTicket[] = "use_session_ticket";
 
 atoms ATOMS;
 
@@ -30,13 +37,20 @@ int on_nif_load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     TlsManager::InitOpenSSL();
     
     ATOMS.atomOk = make_atom(env, kAtomOk);
+    ATOMS.atomTrue = make_atom(env, kAtomTrue);
+    ATOMS.atomFalse = make_atom(env, kAtomFalse);
     ATOMS.atomError = make_atom(env, kAtomError);
-    ATOMS.atomSslNotStarted = make_atom(env, kAtomSllNotStarted);
+    ATOMS.atomOptions = make_atom(env, kAtomOptions);
     ATOMS.atomBadArg = make_atom(env, kAtomBadArg);
+
+    ATOMS.atomSslNotStarted = make_atom(env, kAtomSllNotStarted);
+
     ATOMS.atomCtxCertfile = make_atom(env, kAtomCtxCertfile);
     ATOMS.atomCtxDhfile = make_atom(env, kAtomCtxDhfile);
     ATOMS.atomCtxCacerts = make_atom(env, kAtomCtxCacerts);
     ATOMS.atomCtxCiphers = make_atom(env, kAtomCtxCiphers);
+    ATOMS.atomCtxReuseSessionsTtl = make_atom(env, kAtomCtxReuseSessionsTtl);
+    ATOMS.atomCtxUseSessionTicket = make_atom(env, kAtomCtxUseSessionTicket);
 
     erltls_data* data = static_cast<erltls_data*>(enif_alloc(sizeof(erltls_data)));
     open_resources(env, data);
@@ -69,11 +83,13 @@ static ErlNifFunc nif_funcs[] =
 {    
     {"new_context", 1, enif_ssl_new_context},
     {"ciphers", 1, enif_ciphers},
-    {"ssl_new", 3, enif_ssl_socket_new},
+    {"ssl_new", 4, enif_ssl_socket_new},
     {"ssl_handshake", 1, enif_ssl_socket_handshake},
     {"ssl_send_pending", 1, enif_ssl_socket_send_pending},
     {"ssl_feed_data", 2, enif_ssl_socket_feed_data},
     {"ssl_send_data", 2, enif_ssl_socket_send_data},
+    {"ssl_get_session_asn1", 1, enif_ssl_socket_get_session_ans1},
+    {"ssl_session_reused", 1, enif_ssl_socket_session_reused},
     {"ssl_shutdown", 1, enif_ssl_socket_shutdown}
 };
 

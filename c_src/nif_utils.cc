@@ -31,6 +31,11 @@ ERL_NIF_TERM make_error(ErlNifEnv* env, ERL_NIF_TERM term)
     return enif_make_tuple2(env, ATOMS.atomError, term);
 }
 
+ERL_NIF_TERM make_bad_options(ErlNifEnv* env, ERL_NIF_TERM term)
+{
+    return make_error(env, enif_make_tuple(env, 2, ATOMS.atomOptions, term));
+}
+
 ERL_NIF_TERM make_badarg(ErlNifEnv* env)
 {
     return enif_make_tuple2(env, ATOMS.atomError, ATOMS.atomBadArg);
@@ -67,5 +72,22 @@ bool get_string(ErlNifEnv *env, ERL_NIF_TERM term, std::string* var)
         return true;
     }
     
+    return false;
+}
+
+bool get_boolean(ERL_NIF_TERM term, bool* val)
+{
+    if(enif_is_identical(term, ATOMS.atomTrue))
+    {
+        *val = true;
+        return true;
+    }
+
+    if(enif_is_identical(term, ATOMS.atomFalse))
+    {
+        *val = false;
+        return true;
+    }
+
     return false;
 }

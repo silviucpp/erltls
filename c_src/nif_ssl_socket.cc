@@ -29,6 +29,7 @@ ERL_NIF_TERM enif_ssl_socket_new(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
     
     int role;
     long flags;
+    std::string session_cache;
     SSL_CTX* ctx = get_context(env, data, argv[0]);
     
     if(!ctx)
@@ -40,6 +41,9 @@ ERL_NIF_TERM enif_ssl_socket_new(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
     if(!enif_get_long(env, argv[2], &flags))
         return make_badarg(env);
     
+    if(!get_string(env, argv[3], &session_cache))
+        return make_badarg(env);
+
     scoped_ptr(nif_socket, enif_ssl_socket, new_nif_socket(data->res_ssl_sock), enif_release_resource);
     
     if(nif_socket.get() == NULL)
@@ -50,7 +54,7 @@ ERL_NIF_TERM enif_ssl_socket_new(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
     if(socket == NULL)
         return make_error(env, kErrorFailedToAllocSslSocket);
     
-    if(!socket->Init(ctx, static_cast<TlsSocket::kSslRole>(role), flags))
+    if(!socket->Init(ctx, static_cast<TlsSocket::kSslRole>(role), flags, session_cache))
         return make_error(env, kErrorFailedToInitSslSocket);
     
     nif_socket->socket = socket;
@@ -132,6 +136,34 @@ ERL_NIF_TERM enif_ssl_socket_send_data(ErlNifEnv* env, int argc, const ERL_NIF_T
         return make_badarg(env);
     
     return wp->socket->SendData(env, &bin);
+}
+
+ERL_NIF_TERM enif_ssl_socket_get_session_ans1(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+    UNUSED(argc);
+
+    erltls_data* data = static_cast<erltls_data*>(enif_priv_data(env));
+
+    enif_ssl_socket* wp = NULL;
+
+    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, (void**) &wp))
+        return make_badarg(env);
+
+    return wp->socket->GetSessionASN1(env);
+}
+
+ERL_NIF_TERM enif_ssl_socket_session_reused(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+    UNUSED(argc);
+
+    erltls_data* data = static_cast<erltls_data*>(enif_priv_data(env));
+
+    enif_ssl_socket* wp = NULL;
+
+    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, (void**) &wp))
+        return make_badarg(env);
+
+    return wp->socket->IsSessionReused(env);
 }
 
 ERL_NIF_TERM enif_ssl_socket_shutdown(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])

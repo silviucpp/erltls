@@ -4,6 +4,7 @@
 #include "nif_utils.h"
 #include "macros.h"
 
+#include <openssl/rand.h>
 #include <memory>
 
 static const char kErrorFailedToCreateContext[]    = "failed to create context";
@@ -14,7 +15,7 @@ struct enif_ssl_ctx
     SSL_CTX* ctx;
 };
 
-bool parse_context_props(ErlNifEnv* env, ERL_NIF_TERM list, ContextProperties* props)
+ERL_NIF_TERM parse_context_props(ErlNifEnv* env, ERL_NIF_TERM list, ContextProperties* props)
 {
     ERL_NIF_TERM head;
     const ERL_NIF_TERM *items;
@@ -23,22 +24,68 @@ bool parse_context_props(ErlNifEnv* env, ERL_NIF_TERM list, ContextProperties* p
     while(enif_get_list_cell(env, list, &head, &list))
     {
         if(!enif_get_tuple(env, head, &arity, &items) || arity != 2)
-            return false;
+            return make_bad_options(env, head);
         
         ERL_NIF_TERM key = items[0];
         ERL_NIF_TERM value = items[1];
         
         if(enif_is_identical(key, ATOMS.atomCtxCertfile))
-            get_string(env, value, &props->cert_file);
+        {
+            if(!get_string(env, value, &props->cert_file))
+                return make_bad_options(env, head);
+        }
         else if(enif_is_identical(key, ATOMS.atomCtxCacerts))
-            get_string(env, value, &props->ca_file);
+        {
+            if(!get_string(env, value, &props->ca_file))
+                return make_bad_options(env, head);
+        }
         else if(enif_is_identical(key, ATOMS.atomCtxCiphers))
-            get_string(env, value, &props->ciphers);
+        {
+            if(!get_string(env, value, &props->ciphers))
+                return make_bad_options(env, head);
+        }
         else if(enif_is_identical(key, ATOMS.atomCtxDhfile))
-            get_string(env, value, &props->dh_file);
+        {
+            if(!get_string(env, value, &props->dh_file))
+                return make_bad_options(env, head);
+        }
+        else if(enif_is_identical(key, ATOMS.atomCtxReuseSessionsTtl))
+        {
+            if(!enif_get_uint(env, value, &props->reuse_sessions_ttl_sec))
+                return make_bad_options(env, head);
+        }
+        else if(enif_is_identical(key, ATOMS.atomCtxUseSessionTicket))
+        {
+            if(enif_is_tuple(env, value))
+            {
+                const ERL_NIF_TERM *ticket_items;
+                
+                if(!enif_get_tuple(env, value, &arity, &ticket_items) || arity != 2)
+                    return make_bad_options(env, head);
+                
+                if(!get_boolean(ticket_items[0], &props->use_session_ticket))
+                    return make_bad_options(env, head);
+                
+                if(!get_string(env, ticket_items[1], &props->session_ticket_skey))
+                    return make_bad_options(env, head);
+            }
+            else
+            {
+                if(!get_boolean(value, &props->use_session_ticket))
+                    return make_bad_options(env, head);
+                
+                //generate random key
+                
+                uint8_t key[32];
+                if(RAND_bytes(key, sizeof(key)) <= 0)
+                    return make_bad_options(env, head);
+                
+                props->session_ticket_skey = std::string(reinterpret_cast<const char*>(key), sizeof(key));
+            }
+        }
     }
     
-    return true;
+    return ATOMS.atomOk;
 }
 
 ERL_NIF_TERM enif_ssl_new_context(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -49,8 +96,10 @@ ERL_NIF_TERM enif_ssl_new_context(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
     
     ContextProperties props;
     
-    if(!parse_context_props(env, argv[0], &props))
-        return make_error(env, ATOMS.atomBadArg);
+    ERL_NIF_TERM parse_result = parse_context_props(env, argv[0], &props);
+    
+    if(!enif_is_identical(parse_result, ATOMS.atomOk))
+        return parse_result;
     
     SSL_CTX* ctx = TlsManager::CreateContext(props);
     

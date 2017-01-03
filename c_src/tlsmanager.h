@@ -7,10 +7,16 @@
 
 struct ContextProperties
 {
+    ContextProperties() : reuse_sessions_ttl_sec(300), use_session_ticket(false) {}
+
     std::string cert_file;
     std::string ciphers;
     std::string dh_file;
     std::string ca_file;
+
+    uint32_t reuse_sessions_ttl_sec;
+    bool use_session_ticket;
+    std::string session_ticket_skey;
 };
 
 class TlsManager

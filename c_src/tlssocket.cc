@@ -24,7 +24,7 @@ TlsSocket::~TlsSocket()
         SSL_free(ssl_);
 }
 
-bool TlsSocket::Init(SSL_CTX* ctx, kSslRole role, long flags)
+bool TlsSocket::Init(SSL_CTX* ctx, kSslRole role, long flags, const std::string& session_cache)
 {
     ssl_ = SSL_new(ctx);
     
@@ -38,8 +38,11 @@ bool TlsSocket::Init(SSL_CTX* ctx, kSslRole role, long flags)
         return false;
     
     SSL_set_bio(ssl_, bio_read_, bio_write_);
-    
-    int options = SSL_OP_NO_TICKET|SSL_OP_NO_SSLv2;
+
+    int options = SSL_OP_NO_SSLv2;
+
+    if((flags & kFlagUseSessionTicket) == 0)
+        options |= SSL_OP_NO_TICKET;
     
 #ifdef SSL_OP_NO_COMPRESSION
     if (flags & kFlagCompressionNone)
@@ -52,6 +55,18 @@ bool TlsSocket::Init(SSL_CTX* ctx, kSslRole role, long flags)
     if(!SSL_set_options(ssl_, options))
         return false;
     
+    if(!session_cache.empty())
+    {
+        SSL_SESSION *ssl_session = NULL;
+        const uint8_t* i2d_data = reinterpret_cast<const uint8_t *>(session_cache.data());
+
+        if(d2i_SSL_SESSION(&ssl_session, &i2d_data, session_cache.size()))
+        {
+            SSL_set_session(ssl_, ssl_session);
+            SSL_SESSION_free(ssl_session);
+        }
+    }
+
     if(role == kSslRoleServer)
         SSL_set_accept_state(ssl_);
     else
@@ -60,7 +75,7 @@ bool TlsSocket::Init(SSL_CTX* ctx, kSslRole role, long flags)
     return true;
 }
 
-ERL_NIF_TERM TlsSocket::Shutdown(ErlNifEnv *env)
+ERL_NIF_TERM TlsSocket::Shutdown(ErlNifEnv* env)
 {
     //Avoid calling SSL_shutdown() if handshake wasn't completed.
     if(!ssl_ || SSL_in_init(ssl_))
@@ -78,7 +93,7 @@ ERL_NIF_TERM TlsSocket::Shutdown(ErlNifEnv *env)
     return SendPending(env);
 }
 
-ERL_NIF_TERM TlsSocket::FeedData(ErlNifEnv *env, const ErlNifBinary* bin, bool use_binary)
+ERL_NIF_TERM TlsSocket::FeedData(ErlNifEnv* env, const ErlNifBinary* bin, bool use_binary)
 {
     if(!ssl_)
         return make_error(env, ATOMS.atomSslNotStarted);
@@ -94,7 +109,7 @@ ERL_NIF_TERM TlsSocket::FeedData(ErlNifEnv *env, const ErlNifBinary* bin, bool u
     return DoReadOp(env, use_binary);
 }
 
-ERL_NIF_TERM TlsSocket::SendData(ErlNifEnv *env, const ErlNifBinary* bin)
+ERL_NIF_TERM TlsSocket::SendData(ErlNifEnv* env, const ErlNifBinary* bin)
 {
     assert(ssl_);
     assert(bin->size > 0);
@@ -104,7 +119,7 @@ ERL_NIF_TERM TlsSocket::SendData(ErlNifEnv *env, const ErlNifBinary* bin)
     return SendPending(env);
 }
 
-ERL_NIF_TERM TlsSocket::Handshake(ErlNifEnv *env)
+ERL_NIF_TERM TlsSocket::Handshake(ErlNifEnv* env)
 {
     if(!ssl_)
         return make_error(env, ATOMS.atomSslNotStarted);
@@ -120,7 +135,7 @@ ERL_NIF_TERM TlsSocket::Handshake(ErlNifEnv *env)
     return make_ok_result(env, enif_make_int(env, result));
 }
 
-ERL_NIF_TERM TlsSocket::DoReadOp(ErlNifEnv *env, bool use_binary)
+ERL_NIF_TERM TlsSocket::DoReadOp(ErlNifEnv* env, bool use_binary)
 {
     assert(ssl_);
     
@@ -152,7 +167,7 @@ ERL_NIF_TERM TlsSocket::DoReadOp(ErlNifEnv *env, bool use_binary)
     return make_ok_result(env, term);
 }
 
-ERL_NIF_TERM TlsSocket::SendPending(ErlNifEnv *env)
+ERL_NIF_TERM TlsSocket::SendPending(ErlNifEnv* env)
 {
     if(!ssl_)
         return make_error(env, ATOMS.atomSslNotStarted);
@@ -171,5 +186,39 @@ ERL_NIF_TERM TlsSocket::SendPending(ErlNifEnv *env)
     assert(read_bytes == pending);
 
     return make_ok_result(env, term);
+}
+
+ERL_NIF_TERM TlsSocket::IsSessionReused(ErlNifEnv* env)
+{
+    if(!ssl_)
+        return make_error(env, ATOMS.atomSslNotStarted);
+
+    return SSL_session_reused(ssl_) ? ATOMS.atomTrue : ATOMS.atomFalse;
+}
+
+ERL_NIF_TERM TlsSocket::GetSessionASN1(ErlNifEnv *env)
+{
+    if(!ssl_)
+        return make_error(env, ATOMS.atomSslNotStarted);
+
+    SSL_SESSION* ssl_session = SSL_get_session(ssl_);
+
+    if(!ssl_session)
+        return make_error(env, "session not available");
+
+    // session asn1
+    int session_asn1_size = i2d_SSL_SESSION(ssl_session, NULL);
+
+    if(session_asn1_size <= 0)
+        return make_error(env, "failed to get session size");
+
+    std::unique_ptr<uint8_t[]> session_asn1(new uint8_t[session_asn1_size]);
+    uint8_t* ptr = session_asn1.get();
+
+    if (i2d_SSL_SESSION(ssl_session, &ptr) < 1)
+        return make_error(env, "failed to serialize session");
+
+    ERL_NIF_TERM has_ticket = ssl_session->tlsext_ticklen > 0 ? ATOMS.atomTrue : ATOMS.atomFalse;
+    return enif_make_tuple3(env, ATOMS.atomOk, has_ticket, make_binary(env, session_asn1.get(), session_asn1_size));
 }
 

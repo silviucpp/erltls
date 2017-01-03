@@ -8,12 +8,14 @@
 -export([
     new_context/1,
     ciphers/1,
-    ssl_new/3,
+    ssl_new/4,
     ssl_handshake/1,
     ssl_send_pending/1,
     ssl_feed_data/2,
     ssl_send_data/2,
-    ssl_shutdown/1
+    ssl_shutdown/1,
+    ssl_session_reused/1,
+    ssl_get_session_asn1/1
 ]).
 
 %% nif functions
@@ -45,7 +47,7 @@ new_context(_TlsOptions) ->
 ciphers(_Ctx) ->
     ?NOT_LOADED.
 
-ssl_new(_Context, _Role, _Flags) ->
+ssl_new(_Context, _Role, _Flags, _CachedSession) ->
     ?NOT_LOADED.
 
 ssl_handshake(_SocketRef) ->
@@ -61,4 +63,10 @@ ssl_send_data(_SocketRef, _Bin) ->
     ?NOT_LOADED.
 
 ssl_shutdown(_SocketRef) ->
+    ?NOT_LOADED.
+
+ssl_session_reused(_SocketRef) ->
+    ?NOT_LOADED.
+
+ssl_get_session_asn1(_SocketRef) ->
     ?NOT_LOADED.

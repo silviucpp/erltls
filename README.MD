@@ -63,6 +63,10 @@ Currently supported options also available in erlang `ssl`:
 Options currently related to `erltls` only:
 
 - `{compression, compression_type()}` - disables support for SSL/TLS compression (`{compression, compression_none}`)
+- `{use_session_ticket, boolean() | {boolean(), binary()}}` - Enables session reuse using tickets as described in [RFC5077][2]. 
+In case the key is not specified the tickets will be signed using a random key. In order to specify the key use the format `{true, <<"key_here">>}`.
+- `reuse_sessions_ttl` - The TTL of a session in seconds. In case the session is older than this TTL will not be possible to be reused. 
+A full handshake will be negotiated. 
 
 ### Unsupported SSL methods:
 
@@ -79,6 +83,10 @@ Options currently related to `erltls` only:
 - `connection_information/2`
 - `close/2`
 
+### SSL methods related to erltls
+
+- `session_reused/1` - Query, whether a reused session was negotiated during the handshake (make sense if session ticketing is enabled)
+
 ### Known limitations
 
 - working only with `{packet, 0}` inet option 
@@ -88,3 +96,4 @@ Options currently related to `erltls` only:
   not counting the handshake process.
 
 [1]:http://erlang.org/doc/man/ssl.html
+[2]:https://www.ietf.org/rfc/rfc5077.txt

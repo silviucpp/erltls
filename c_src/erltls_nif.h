@@ -6,13 +6,20 @@
 struct atoms
 {
     ERL_NIF_TERM atomOk;
+    ERL_NIF_TERM atomTrue;
+    ERL_NIF_TERM atomFalse;
     ERL_NIF_TERM atomError;
     ERL_NIF_TERM atomBadArg;
+    ERL_NIF_TERM atomOptions;
+
     ERL_NIF_TERM atomSslNotStarted;
+
     ERL_NIF_TERM atomCtxCertfile;
     ERL_NIF_TERM atomCtxDhfile;
     ERL_NIF_TERM atomCtxCacerts;
     ERL_NIF_TERM atomCtxCiphers;
+    ERL_NIF_TERM atomCtxReuseSessionsTtl;
+    ERL_NIF_TERM atomCtxUseSessionTicket;
 };
 
 struct erltls_data
