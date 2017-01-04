@@ -238,3 +238,30 @@ ERL_NIF_TERM TlsSocket::GetSessionASN1(ErlNifEnv *env)
     return enif_make_tuple3(env, ATOMS.atomOk, has_ticket, make_binary(env, session_asn1.get(), session_asn1_size));
 }
 
+ERL_NIF_TERM TlsSocket::GetPeerCert(ErlNifEnv *env)
+{
+    if(!ssl_)
+        return make_error(env, ATOMS.atomSslNotStarted);
+
+    scoped_ptr(cert, X509, SSL_get_peer_certificate(ssl_), X509_free);
+
+    if(cert.get() == NULL)
+        return make_error(env, ATOMS.atomError_enopeercert);
+
+    int len = i2d_X509(cert.get(), NULL);
+
+    if (len <= 0)
+        return make_error(env, ATOMS.atomError_epeercert);
+
+    std::unique_ptr<uint8_t[]> cert_str(new uint8_t[len]);
+    uint8_t* tmp = cert_str.get();
+
+    //We must use a temporary value here, since i2d_X509(X509 *x, unsigned char **out) increments *out.
+
+    if (i2d_X509(cert.get(), &tmp) < 0)
+        return make_error(env, ATOMS.atomError_epeercert);
+
+    return make_ok_result(env, make_binary(env, cert_str.get(), len));
+}
+
+

@@ -76,7 +76,6 @@ A full handshake will be negotiated.
 - `shutdown/2`
 - `renegotiate/1`
 - `prf/5`
-- `peercert/1`
 - `negotiated_protocol/1`
 - `format_error/1`
 - `eccs/1`

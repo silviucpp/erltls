@@ -18,6 +18,7 @@ struct atoms
     ERL_NIF_TERM atomError_eselfsignedcert;
     ERL_NIF_TERM atomError_echaintoolong;
     ERL_NIF_TERM atomError_epeercert;
+    ERL_NIF_TERM atomError_enopeercert;
 
     ERL_NIF_TERM atomVerifyNone;
     ERL_NIF_TERM atomVerifyPeer;

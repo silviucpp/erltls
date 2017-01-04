@@ -40,7 +40,8 @@
     shutdown/1,
     session_reused/1,
     get_session_asn1/1,
-    get_pending_data/1
+    get_pending_data/1,
+    peercert/1
 ]).
 
 new(TcpSocket, TlsOptions, EmulatedOpts, Role) ->
@@ -88,6 +89,9 @@ shutdown(Pid) ->
 
 get_pending_data(Pid) ->
     call(Pid, get_pending_data).
+
+peercert(Pid) ->
+    call(Pid, peercert).
 
 setopts(Pid, InetOpts, EmulatedOpts) ->
     call(Pid, {setopts, InetOpts, EmulatedOpts}).
@@ -198,6 +202,9 @@ handle_call({handshake, TcpSocket}, _From, #state{tls_ref = TlsSock} = State) ->
                     Error
             end
     end;
+
+handle_call(peercert, _From, #state{tls_ref = TlsRef} = State) ->
+    {reply, erltls_nif:ssl_peercert(TlsRef), State};
 
 handle_call(get_session_asn1, _From, #state{tls_ref = TlsRef} = State) ->
     {reply, erltls_nif:ssl_get_session_asn1(TlsRef), State};

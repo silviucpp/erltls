@@ -23,6 +23,7 @@
     setopts/2,
     getstat/1,
     getstat/2,
+    peercert/1,
     peername/1,
     sockname/1,
     session_reused/1,
@@ -172,6 +173,12 @@ getstat(#tlssocket{tcp_sock = TcpSock}) ->
 
 getstat(#tlssocket{tcp_sock = TcpSock}, Opt) ->
     inet:getstat(TcpSock, Opt).
+
+-spec peercert(tlssocket()) ->
+    {ok, binary()} | {error, reason()}.
+
+peercert(#tlssocket{ssl_pid = Pid}) ->
+    erltls_ssl_process:peercert(Pid).
 
 -spec peername(tlssocket()) ->
     {ok, {inet:ip_address(), inet:port_number()}} | {error, reason()}.

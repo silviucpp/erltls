@@ -2,6 +2,7 @@
 -author("silviu.caragea").
 
 -include_lib("common_test/include/ct.hrl").
+-include_lib("public_key/include/public_key.hrl").
 -include("erltls.hrl").
 
 -compile(export_all).
@@ -25,7 +26,8 @@ groups() -> [
         test_active_mode,
         test_list_mode,
         test_server_mode,
-        test_session_reused_ticket
+        test_session_reused_ticket,
+        test_peercert
     ]}
 ].
 
@@ -370,3 +372,10 @@ resume_client(Reused) ->
     {ok, Socket} = erltls:connect("localhost", 10001, [binary, {use_session_ticket, true}, {active, false}], infinity),
     Reused = erltls:session_reused(Socket),
     erltls:send(Socket, "foo").
+
+test_peercert(_Config) ->
+    {ok, Socket} = erltls:connect("google.com", 443, [], infinity),
+    {ok, Cert} = erltls:peercert(Socket),
+    true = is_record(public_key:pkix_decode_cert(Cert, plain), 'Certificate'),
+    ok = erltls:close(Socket),
+    true.

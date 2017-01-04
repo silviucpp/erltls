@@ -18,6 +18,7 @@ const char kAtomError_epeercertinvalid[] = "epeercertinvalid";
 const char kAtomError_eselfsignedcert[] = "eselfsignedcert";
 const char kAtomError_echaintoolong[] = "echaintoolong";
 const char kAtomError_epeercert[] = "epeercert";
+const char kAtomError_enopeercert[] = "enopeercert";
 
 const char kAtomVerifyNone[] = "verify_none";
 const char kAtomVerifyPeer[] = "verify_peer";
@@ -62,6 +63,7 @@ int on_nif_load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     ATOMS.atomError_eselfsignedcert = make_atom(env, kAtomError_eselfsignedcert);
     ATOMS.atomError_echaintoolong = make_atom(env, kAtomError_echaintoolong);
     ATOMS.atomError_epeercert = make_atom(env, kAtomError_epeercert);
+    ATOMS.atomError_enopeercert = make_atom(env, kAtomError_enopeercert);
 
     ATOMS.atomVerifyNone = make_atom(env, kAtomVerifyNone);
     ATOMS.atomVerifyPeer = make_atom(env, kAtomVerifyPeer);
@@ -117,6 +119,7 @@ static ErlNifFunc nif_funcs[] =
     {"ssl_send_data", 2, enif_ssl_socket_send_data},
     {"ssl_get_session_asn1", 1, enif_ssl_socket_get_session_ans1},
     {"ssl_session_reused", 1, enif_ssl_socket_session_reused},
+    {"ssl_peercert", 1, enif_ssl_socket_peercert},
     {"ssl_shutdown", 1, enif_ssl_socket_shutdown}
 };
 
