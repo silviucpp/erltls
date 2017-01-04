@@ -5,9 +5,8 @@
 
 -behaviour(gen_server).
 
--define(VERIFY_NONE, 1).
--define(COMPRESSION_NONE, 2).
--define(SESSION_TICKET, 4).
+-define(COMPRESSION_NONE, 1).
+-define(SESSION_TICKET, 2).
 
 -define(SERVER, ?MODULE).
 
@@ -307,11 +306,6 @@ call(Pid, Message) ->
 
 %internal methods
 
-get_verify(verify_none) ->
-    ?VERIFY_NONE;
-get_verify(_) ->
-    0.
-
 get_compression(compression_none) ->
     ?COMPRESSION_NONE;
 get_compression(_) ->
@@ -323,10 +317,9 @@ get_session_ticket(_) ->
     0.
 
 get_ssl_flags(Options) ->
-    VerifyType = get_verify(erltls_utils:lookup(verify, Options)),
     CompressionType = get_compression(erltls_utils:lookup(compression, Options)),
     UseSessionTicket = get_session_ticket(erltls_options:use_session_ticket(erltls_utils:lookup(use_session_ticket, Options))),
-    VerifyType bor CompressionType bor UseSessionTicket.
+    CompressionType bor UseSessionTicket.
 
 get_ssl_process(?SSL_ROLE_SERVER, TcpSocket, TlsSock, TlsOpts, EmulatedOpts) ->
     start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, false, <<>>);

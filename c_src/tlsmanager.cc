@@ -2,11 +2,28 @@
 #include "ssldh.h"
 #include "erl_nif.h"
 
+#include <openssl/rand.h>
 #include <openssl/err.h>
 #include <memory>
 
-//@todo:
-//1. implement verify callback
+struct callback_data
+{
+    int verify_depth;
+};
+
+static int callback_data_index = -1;
+static char kCallbackDataTag[] = "callback_data";
+
+static void callback_data_free(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl, void *argp)
+{
+    UNUSED(parent);
+    UNUSED(ad);
+    UNUSED(idx);
+    UNUSED(argl);
+    UNUSED(argp);
+    //callback_data *cb_data = reinterpret_cast<callback_data*>(ptr);
+	enif_free(ptr);
+}
 
 void TlsManager::InitOpenSSL()
 {
@@ -17,6 +34,8 @@ void TlsManager::InitOpenSSL()
     SSL_load_error_strings();
     ERR_load_BIO_strings();
     OpenSSL_add_all_algorithms();
+
+    callback_data_index = SSL_CTX_get_ex_new_index(0, reinterpret_cast<void*>(kCallbackDataTag), NULL, NULL, callback_data_free);
 }
 
 void TlsManager::CleanupOpenSSL()
@@ -29,11 +48,54 @@ void TlsManager::CleanupOpenSSL()
 #endif
 }
 
-int TlsManager::VerifyCallback(int preverify_ok, X509_STORE_CTX* ctx)
+int TlsManager::VerifyCallback(int ok, X509_STORE_CTX *x509_ctx)
 {
-    UNUSED(preverify_ok);
-    UNUSED(ctx);
-    return 1;
+    int cert_err = X509_STORE_CTX_get_error(x509_ctx);
+    int depth = X509_STORE_CTX_get_error_depth(x509_ctx);
+    SSL *ssl = reinterpret_cast<SSL*>(X509_STORE_CTX_get_ex_data(x509_ctx, SSL_get_ex_data_X509_STORE_CTX_idx()));
+    SSL_CTX *ctx = SSL_get_SSL_CTX(ssl);
+
+    callback_data *cb_data = reinterpret_cast<callback_data*>(SSL_CTX_get_ex_data(ctx, callback_data_index));
+
+    if (!ok && depth >= cb_data->verify_depth)
+        ok = 1;
+    
+    switch (cert_err)
+    {
+        case X509_V_OK:
+        case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
+            ok = 1;
+            break;
+
+        case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT:
+        case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY:
+            //MAYBE_SET_ERRSTR("enoissuercert");
+            break;
+
+        case X509_V_ERR_CERT_HAS_EXPIRED:
+            //MAYBE_SET_ERRSTR("epeercertexpired");
+            break;
+
+        case X509_V_ERR_CERT_NOT_YET_VALID:
+        case X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD:
+        case X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD:
+            //MAYBE_SET_ERRSTR("epeercertinvalid");
+            break;
+
+        case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
+            //MAYBE_SET_ERRSTR("eselfsignedcert");
+            break;
+
+        case X509_V_ERR_CERT_CHAIN_TOO_LONG:
+            //MAYBE_SET_ERRSTR("echaintoolong");
+            break;
+
+        default:
+            //MAYBE_SET_ERRSTR("epeercert");
+            break;
+    }
+
+    return ok;
 }
 
 SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
@@ -63,8 +125,18 @@ SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
 
         if(props.use_session_ticket)
         {
-            assert(props.session_ticket_skey.empty() == false);
-
+            std::string ticket_secret_key = props.session_ticket_skey;
+            
+            //generate random key in case none was provided
+            if(ticket_secret_key.empty())
+            {
+                uint8_t key[32];
+                if(RAND_bytes(key, sizeof(key)) <= 0)
+                    return NULL;
+                
+                ticket_secret_key = std::string(reinterpret_cast<const char*>(key), sizeof(key));
+            }
+            
             uint8_t keys[48] = {0};
 
             EVP_PKEY *pkey = SSL_CTX_get0_privatekey(ctx.get());
@@ -77,7 +149,7 @@ SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
             EVP_MD_CTX mdctx;
             EVP_MD_CTX_init(&mdctx);
             EVP_SignInit(&mdctx, EVP_sha256());
-            EVP_SignUpdate(&mdctx, props.session_ticket_skey.data(), props.session_ticket_skey.length());
+            EVP_SignUpdate(&mdctx, ticket_secret_key.data(), ticket_secret_key.length());
             EVP_SignFinal(&mdctx, sign, &siglen, pkey);
             EVP_MD_CTX_cleanup(&mdctx);
             memcpy(keys, sign, sizeof(keys));
@@ -110,7 +182,41 @@ SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
     SSL_CTX_set_mode(ctx.get(), SSL_MODE_RELEASE_BUFFERS);
 #endif
     
-    SSL_CTX_set_verify(ctx.get(), SSL_VERIFY_PEER|SSL_VERIFY_CLIENT_ONCE, VerifyCallback);
-    
+    scoped_ptr(cb_data, callback_data, reinterpret_cast<callback_data*>(enif_alloc(sizeof(callback_data))), enif_free);
+
+    if(!cb_data.get())
+        return NULL;
+
+    cb_data->verify_depth = props.verify_depth;
+
+    if(!SSL_CTX_set_ex_data(ctx.get(), callback_data_index, cb_data.get()))
+        return NULL;
+
+    cb_data.release();
+
+    SSL_CTX_set_verify_depth(ctx.get(), props.verify_depth);
+    SSL_CTX_set_verify(ctx.get(), GetSSLVerifyFlags(props.verify_mode, props.fail_if_no_peer_cert), VerifyCallback);
+
     return ctx.release();
+}
+
+int TlsManager::GetSSLVerifyFlags(int verify, bool fail_if_no_peer_cert)
+{
+    int flags =  fail_if_no_peer_cert ? SSL_VERIFY_FAIL_IF_NO_PEER_CERT : 0;
+
+    switch (verify)
+    {
+        case VERIFY_NONE:
+            flags |= SSL_VERIFY_NONE;
+            break;
+
+        case VERIFY_PEER:
+            flags |= SSL_VERIFY_PEER|SSL_VERIFY_CLIENT_ONCE;
+            break;
+
+        default:
+            flags = SSL_VERIFY_NONE;
+    }
+
+    return flags;
 }

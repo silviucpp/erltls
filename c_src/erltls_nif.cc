@@ -12,6 +12,9 @@ const char kAtomError[] = "error";
 const char kAtomBadArg[] = "badarg";
 const char kAtomOptions[] = "options";
 
+const char kAtomVerifyNone[] = "verify_none";
+const char kAtomVerifyPeer[] = "verify_peer";
+
 const char kAtomSllNotStarted[] = "ssl_not_started";
 
 const char kAtomCtxCertfile[] = "certfile";
@@ -20,6 +23,9 @@ const char kAtomCtxCacerts[] = "cacerts";
 const char kAtomCtxCiphers[] = "ciphers";
 const char kAtomCtxReuseSessionsTtl[] = "reuse_sessions_ttl";
 const char kAtomCtxUseSessionTicket[] = "use_session_ticket";
+const char kAtomCtxVerify[] = "verify";
+const char kAtomCtxFailIfNoPeerCert[] = "fail_if_no_peer_cert";
+const char kAtomCtxDepth[] = "depth";
 
 atoms ATOMS;
 
@@ -43,6 +49,9 @@ int on_nif_load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     ATOMS.atomOptions = make_atom(env, kAtomOptions);
     ATOMS.atomBadArg = make_atom(env, kAtomBadArg);
 
+    ATOMS.atomVerifyNone = make_atom(env, kAtomVerifyNone);
+    ATOMS.atomVerifyPeer = make_atom(env, kAtomVerifyPeer);
+
     ATOMS.atomSslNotStarted = make_atom(env, kAtomSllNotStarted);
 
     ATOMS.atomCtxCertfile = make_atom(env, kAtomCtxCertfile);
@@ -51,6 +60,10 @@ int on_nif_load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     ATOMS.atomCtxCiphers = make_atom(env, kAtomCtxCiphers);
     ATOMS.atomCtxReuseSessionsTtl = make_atom(env, kAtomCtxReuseSessionsTtl);
     ATOMS.atomCtxUseSessionTicket = make_atom(env, kAtomCtxUseSessionTicket);
+
+    ATOMS.atomCtxVerify = make_atom(env, kAtomCtxVerify);
+    ATOMS.atomCtxFailIfNoPeerCert = make_atom(env, kAtomCtxFailIfNoPeerCert);
+    ATOMS.atomCtxDepth = make_atom(env, kAtomCtxDepth);
 
     erltls_data* data = static_cast<erltls_data*>(enif_alloc(sizeof(erltls_data)));
     open_resources(env, data);

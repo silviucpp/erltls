@@ -28,9 +28,6 @@ bool TlsSocket::Init(SSL_CTX* ctx, kSslRole role, long flags, const std::string&
 {
     ssl_ = SSL_new(ctx);
     
-    if (flags & kFlagVerifyNone)
-        SSL_set_verify(ssl_, SSL_VERIFY_NONE, TlsManager::VerifyCallback);
-    
     bio_read_ = BIO_new(BIO_s_mem());
     bio_write_ = BIO_new(BIO_s_mem());
     

@@ -7,11 +7,15 @@
 
 -type tls_option()::
     {verify, verify_type()} |
-    {compression, compression_type()} |
+    {depth, integer()} |
+    {fail_if_no_peer_cert, boolean()} |
     {certfile, path()} |
     {cacerts, [Der::binary()]} |
     {dhfile, path()} |
-    {ciphers, ciphers()}.
+    {ciphers, ciphers()} |
+    {compression, compression_type()} |
+    {reuse_sessions_ttl, integer()} |
+    {use_session_ticket, boolean() | {boolean(), binary()}}.
 
 -type tlssocket()                :: #tlssocket{}.
 -type socket_connect_option()    :: gen_tcp:connect_option().

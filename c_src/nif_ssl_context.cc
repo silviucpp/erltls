@@ -4,7 +4,6 @@
 #include "nif_utils.h"
 #include "macros.h"
 
-#include <openssl/rand.h>
 #include <memory>
 
 static const char kErrorFailedToCreateContext[]    = "failed to create context";
@@ -73,15 +72,26 @@ ERL_NIF_TERM parse_context_props(ErlNifEnv* env, ERL_NIF_TERM list, ContextPrope
             {
                 if(!get_boolean(value, &props->use_session_ticket))
                     return make_bad_options(env, head);
-                
-                //generate random key
-                
-                uint8_t key[32];
-                if(RAND_bytes(key, sizeof(key)) <= 0)
-                    return make_bad_options(env, head);
-                
-                props->session_ticket_skey = std::string(reinterpret_cast<const char*>(key), sizeof(key));
             }
+        }
+        else if(enif_is_identical(key, ATOMS.atomCtxFailIfNoPeerCert))
+        {
+            if(!get_boolean(value, &props->fail_if_no_peer_cert))
+                return make_bad_options(env, head);
+        }
+        else if(enif_is_identical(key, ATOMS.atomCtxDepth))
+        {
+            if(!enif_get_int(env, value, &props->verify_depth))
+                return make_bad_options(env, head);
+        }
+        else if(enif_is_identical(key, ATOMS.atomCtxVerify))
+        {
+            if(enif_is_identical(value, ATOMS.atomVerifyNone))
+                props->verify_mode = VERIFY_NONE;
+            else if(enif_is_identical(value, ATOMS.atomVerifyPeer))
+                props->verify_mode = VERIFY_PEER;
+            else
+                return make_bad_options(env, head);
         }
     }
     

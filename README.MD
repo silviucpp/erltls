@@ -54,7 +54,9 @@ ok = erltls:close(Socket).
 
 Currently supported options also available in erlang `ssl`:
 
-- `{verify, verify_type()}`  
+- `{verify, verify_type()}`
+- `{depth, integer()}`
+- `{fail_if_no_peer_cert, boolean()}`
 - `{certfile, path()}` (file should be in PEM format)
 - `{cacerts, [path()]}`
 - `{dhfile, path()}` 
@@ -92,7 +94,7 @@ A full handshake will be negotiated.
 - working only with `{packet, 0}` inet option 
 - When you use `recv/2` and `Length` > 0 it's not returning a number of bytes equal's with `Length`, basically reads `Length` bytes from
   the wire, decode them and returns the result. So it might be less bytes as time there is also the SSL/TLS record overhead counted.
-- Handshake process doesn't have a timeout implemented yet. So in `connect/*` or `ssl_accept/*` the timeout param is actually 
+- Handshake process don't have a timeout implemented yet. So in `connect/*` or `ssl_accept/*` the timeout param is actually 
   not counting the handshake process.
 
 [1]:http://erlang.org/doc/man/ssl.html

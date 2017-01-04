@@ -12,6 +12,9 @@ struct atoms
     ERL_NIF_TERM atomBadArg;
     ERL_NIF_TERM atomOptions;
 
+    ERL_NIF_TERM atomVerifyNone;
+    ERL_NIF_TERM atomVerifyPeer;
+
     ERL_NIF_TERM atomSslNotStarted;
 
     ERL_NIF_TERM atomCtxCertfile;
@@ -20,6 +23,10 @@ struct atoms
     ERL_NIF_TERM atomCtxCiphers;
     ERL_NIF_TERM atomCtxReuseSessionsTtl;
     ERL_NIF_TERM atomCtxUseSessionTicket;
+
+    ERL_NIF_TERM atomCtxVerify;
+    ERL_NIF_TERM atomCtxFailIfNoPeerCert;
+    ERL_NIF_TERM atomCtxDepth;
 };
 
 struct erltls_data
