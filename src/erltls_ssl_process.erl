@@ -11,6 +11,8 @@
 
 -define(SERVER, ?MODULE).
 
+-define(PENDING_DATA_INTERVAL, 10).
+
 -record(state, {
     tcp,
     tls_ref,
@@ -20,7 +22,8 @@
     owner_monitor_ref,
     tcp_monitor_ref,
     hk_completed = false,
-    socket_ref
+    socket_ref,
+    pending_buffer = <<>>
 }).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -28,16 +31,17 @@
 -export([
     new/4,
     new/5,
+    setopts/3,
     get_options/1,
     get_emulated_options/2,
-    set_emulated_options/2,
     controlling_process/2,
     handshake/2,
     encode_data/2,
     decode_data/2,
     shutdown/1,
     session_reused/1,
-    get_session_asn1/1
+    get_session_asn1/1,
+    get_pending_data/1
 ]).
 
 new(TcpSocket, TlsOptions, EmulatedOpts, Role) ->
@@ -62,11 +66,6 @@ get_options(Pid) ->
 get_emulated_options(Pid, OptionNames) ->
     call(Pid, {get_emulated_options, OptionNames}).
 
-set_emulated_options(_, []) ->
-    ok;
-set_emulated_options(Pid, Opts) ->
-    call(Pid, {set_emulated_options, Opts}).
-
 controlling_process(Pid, NewOwner) ->
     call(Pid, {controlling_process, self(), NewOwner}).
 
@@ -88,6 +87,12 @@ get_session_asn1(Pid) ->
 shutdown(Pid) ->
     call(Pid, shutdown).
 
+get_pending_data(Pid) ->
+    call(Pid, get_pending_data).
+
+setopts(Pid, InetOpts, EmulatedOpts) ->
+    call(Pid, {setopts, InetOpts, EmulatedOpts}).
+
 %internals for gen_server
 
 init(#state{tcp = TcpSocket} = State) ->
@@ -108,14 +113,40 @@ handle_call({decode_data, TlsData}, _From, #state{tls_ref = TlsSock, emul_opts =
     end,
     {reply, Response, State};
 
+handle_call({setopts, InetOpts, NewEmulatedOpts}, _From, #state{tcp = TcpSock, emul_opts = EmulatedOps, pending_buffer = Pb} = State) ->
+    case set_inet_opts(TcpSock, InetOpts) of
+        ok ->
+            % in case we have pending data and socket is active we send it
+            case byte_size(Pb) > 0 of
+                true ->
+                    case erltls_utils:lookup(active, TcpSock, false) of
+                        false ->
+                            ok;
+                        _ ->
+                            erlang:send_after(?PENDING_DATA_INTERVAL, self(), send_pending_data)
+                    end;
+                _ ->
+                    ok
+            end,
+
+            case NewEmulatedOpts of
+                [] ->
+                    {reply, ok, State};
+                _ ->
+                    {reply, ok, State#state{emul_opts = erltls_options:emulated_list2record(NewEmulatedOpts, EmulatedOps)}}
+            end;
+        Error ->
+            {reply, Error, State}
+    end;
+
+handle_call(get_pending_data, _From, #state{pending_buffer = PendingBuff} = State) ->
+    {reply, PendingBuff, State#state {pending_buffer = <<>>}};
+
 handle_call(get_options, _From, #state{emul_opts = EmulatedOpts, tls_opts = TlsOpts} = State) ->
     {reply, {ok, TlsOpts, erltls_options:emulated_record2list(EmulatedOpts)}, State};
 
 handle_call({get_emulated_options, OptionNames}, _From, #state{emul_opts = EmulatedOpts} = State) ->
     {reply, {ok, erltls_options:emulated_by_names(OptionNames, EmulatedOpts)}, State};
-
-handle_call({set_emulated_options, Opts}, _From, #state{emul_opts = EmulatedOps} = State) ->
-    {reply, ok, State#state{emul_opts = erltls_options:emulated_list2record(Opts, EmulatedOps)}};
 
 handle_call({controlling_process, SenderPid, NewOwner}, _From, State) ->
     #state{owner_pid = OwnerPid, owner_monitor_ref = OwnerMonitRef} = State,
@@ -145,7 +176,21 @@ handle_call({handshake, TcpSocket}, _From, #state{tls_ref = TlsSock} = State) ->
                     case do_handshake(TcpSocket, TlsSock) of
                         ok ->
                             change_active(TcpSocket, CurrentMode, false),
-                            {reply, ok, State#state{hk_completed = true}};
+
+                            case erltls_nif:ssl_feed_data(TlsSock, <<>>) of
+                                {ok, PendingBuff} ->
+
+                                    case PendingBuff of
+                                        <<>> ->
+                                            ok;
+                                        _ ->
+                                            erlang:send_after(?PENDING_DATA_INTERVAL, self(), send_pending_data)
+                                    end,
+
+                                    {reply, ok, State#state{hk_completed = true, pending_buffer = PendingBuff}};
+                                Error ->
+                                    Error
+                            end;
                         Error ->
                             change_active(TcpSocket, CurrentMode, false),
                             {reply, Error, State}
@@ -175,14 +220,14 @@ handle_cast(Request, State) ->
     ?ERROR_MSG("handle_cast unknown request: ~p", [Request]),
     {noreply, State}.
 
-handle_info({tcp, TcpSocket, TlsData}, #state{tcp = TcpSocket, tls_ref = TlsRef, owner_pid = Pid, socket_ref = SockRef, emul_opts = EmOpt} = State) ->
+handle_info({tcp, TcpSocket, TlsData}, #state{tcp = TcpSocket, tls_ref = TlsRef, owner_pid = Pid, socket_ref = SockRef, emul_opts = EmOpt, pending_buffer = Pb} = State) ->
     case erltls_nif:ssl_feed_data(TlsRef, TlsData) of
         {ok, RawData} ->
-            Pid ! {ssl, SockRef, convert_data(EmOpt#emulated_opts.mode, RawData)};
+            Pid ! {ssl, SockRef, convert_data(EmOpt#emulated_opts.mode, get_buffer(Pb, RawData))};
         Error ->
             Pid ! {ssl_error, SockRef, Error}
     end,
-    {noreply, State};
+    {noreply, State#state {pending_buffer = <<>>}};
 
 handle_info({tcp_closed, TcpSocket}, #state{tcp = TcpSocket, owner_pid = Pid, socket_ref = SockRef} = State) ->
     Pid ! {ssl_closed, SockRef},
@@ -195,6 +240,36 @@ handle_info({tcp_error, TcpSocket, Reason}, #state{tcp = TcpSocket, owner_pid = 
 handle_info({tcp_passive, TcpSocket}, #state{tcp = TcpSocket, owner_pid = Pid, socket_ref = SockRef} = State) ->
     Pid ! {ssl_passive, SockRef},
     {noreply, State};
+
+handle_info(send_pending_data, #state{tcp = TcpSocket, tls_ref = TlsRef, pending_buffer = PendingBuffer, owner_pid = Pid, socket_ref = SockRef, emul_opts = EmOpt} = State) ->
+    case PendingBuffer of
+        <<>> ->
+            ok;
+        _ ->
+            case inet:getopts(TcpSocket, [active]) of
+                {ok, [{active, false}]} ->
+                    ok;
+                {ok, [{active, Active}]} ->
+                    case Active of
+                        true ->
+                            ok;
+                        once ->
+                            inet:setopts(TcpSocket, [{active, false}]);
+                        N when is_integer(N) ->
+                            inet:setopts(TcpSocket, [{active, N-1}])
+                    end,
+
+                    case pop_active_message(TcpSocket, TlsRef, PendingBuffer) of
+                        {ok, SendData} ->
+                            Pid ! {ssl, SockRef, convert_data(EmOpt#emulated_opts.mode, SendData)};
+                        Error ->
+                            Pid ! {ssl_error, SockRef, Error}
+                    end;
+                Error ->
+                    ?ERROR_MSG("failed to get socket active mode: ~p", [Error])
+            end
+    end,
+    {noreply, State#state {pending_buffer = <<>>}};
 
 handle_info({'DOWN', MonitorRef, _, _, _}, State) ->
     #state{tcp = TcpSocket, tls_ref = TlsRef, owner_monitor_ref = OwnerMonitorRef, tcp_monitor_ref = TcpMonitorRef} = State,
@@ -254,7 +329,7 @@ get_ssl_flags(Options) ->
     VerifyType bor CompressionType bor UseSessionTicket.
 
 get_ssl_process(?SSL_ROLE_SERVER, TcpSocket, TlsSock, TlsOpts, EmulatedOpts) ->
-    start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, false);
+    start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, false, <<>>);
 get_ssl_process(?SSL_ROLE_CLIENT, TcpSocket, TlsSock, TlsOpts, EmulatedOpts) ->
     case inet:getopts(TcpSocket, [active]) of
         {ok, [{active, CurrentMode}]} ->
@@ -262,7 +337,13 @@ get_ssl_process(?SSL_ROLE_CLIENT, TcpSocket, TlsSock, TlsOpts, EmulatedOpts) ->
             case do_handshake(TcpSocket, TlsSock) of
                 ok ->
                     change_active(TcpSocket, false, CurrentMode),
-                    start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, true);
+
+                    case erltls_nif:ssl_feed_data(TlsSock, <<>>) of
+                        {ok, PendingBuff} ->
+                            start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, true, PendingBuff);
+                        Error ->
+                            Error
+                    end;
                 Error ->
                     Error
             end;
@@ -270,12 +351,13 @@ get_ssl_process(?SSL_ROLE_CLIENT, TcpSocket, TlsSock, TlsOpts, EmulatedOpts) ->
             Error
     end.
 
-start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, HkCompleted) ->
+start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, HkCompleted, PendingBuf) ->
     State = #state{
         tcp = TcpSocket,
         tls_ref = TlsSock,
         owner_pid = self(),
         hk_completed = HkCompleted,
+        pending_buffer = PendingBuf,
         emul_opts = erltls_options:emulated_list2record(EmulatedOpts),
         tls_opts = TlsOpts
     },
@@ -284,6 +366,13 @@ start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, HkCompleted) ->
         {ok, Pid} ->
             case gen_tcp:controlling_process(TcpSocket, Pid) of
                 ok ->
+                    case PendingBuf of
+                        <<>> ->
+                            ok;
+                        _ ->
+                            erlang:send_after(?PENDING_DATA_INTERVAL, self(), send_pending_data)
+                    end,
+
                     {ok, #tlssocket{tcp_sock = TcpSocket, ssl_pid = Pid}};
                 Error ->
                     stop_process(Pid),
@@ -356,7 +445,30 @@ mandatory_cert(?SSL_ROLE_SERVER) ->
 mandatory_cert(?SSL_ROLE_CLIENT) ->
     false.
 
+get_buffer(<<>>, NewData) ->
+    NewData;
+get_buffer(Buffer, NewData) ->
+    <<Buffer/binary, NewData/binary>>.
+
 convert_data(binary, Data) ->
     Data;
 convert_data(list, Data) ->
     binary_to_list(Data).
+
+set_inet_opts(_TcpSock, []) ->
+    ok;
+set_inet_opts(TcpSock, Options) ->
+    inet:setopts(TcpSock, Options).
+
+pop_active_message(TcpSocket, TlsRef, Buffer) ->
+    receive
+        {tcp, TcpSocket, TlsData} ->
+            case erltls_nif:ssl_feed_data(TlsRef, TlsData) of
+                {ok, NewData} ->
+                    {ok, <<Buffer/binary, NewData/binary>>};
+                Error ->
+                    Error
+            end
+        after 0 ->
+            {ok, Buffer}
+    end.

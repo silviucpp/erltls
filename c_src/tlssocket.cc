@@ -98,10 +98,13 @@ ERL_NIF_TERM TlsSocket::FeedData(ErlNifEnv* env, const ErlNifBinary* bin)
     if(!ssl_)
         return make_error(env, ATOMS.atomSslNotStarted);
     
-    int ret = BIO_write(bio_read_, bin->data, static_cast<int>(bin->size));
+    if(bin->size)
+    {
+        int ret = BIO_write(bio_read_, bin->data, static_cast<int>(bin->size));
 
-    if(ret != static_cast<int>(bin->size))
-        return make_error(env, "BIO_write failed");
+        if(ret != static_cast<int>(bin->size))
+            return make_error(env, "BIO_write failed");
+    }
 
     if (!SSL_is_init_finished(ssl_))
         return ATOMS.atomOk;

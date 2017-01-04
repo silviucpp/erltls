@@ -24,7 +24,8 @@ groups() -> [
         test_send_recv,
         test_active_mode,
         test_list_mode,
-        test_server_mode
+        test_server_mode,
+        test_session_reused_ticket
     ]}
 ].
 
@@ -329,3 +330,43 @@ test_server_mode(_Config) ->
     ok = erltls:close(Socket),
     ok = erltls:close(LSocket),
     true.
+
+test_session_reused_ticket(_Config) ->
+    spawn(fun()->
+        {ok, ListenSocket} = erltls:listen(10001, [
+            {certfile, get_certificate()},
+            binary,
+            {active, false},
+            {reuseaddr, true},
+            {ciphers, ["AES128-GCM-SHA256"]},
+            {verify, verify_none},
+            {compression, compression_none},
+            {use_session_ticket, {true, <<"ewjfhwejkfhjdhdjkfhdsjfch">>}},
+            {reuse_sessions_ttl, 120}
+        ]),
+        session_reused_server(ListenSocket, 5)
+    end),
+
+    true = erltls_ticket_cache:delete_all(),
+
+    ok = resume_client(false),
+    ok = resume_client(true),
+    ok = resume_client(true),
+    ok = resume_client(true),
+    ok = resume_client(true),
+    true.
+
+session_reused_server(ListenSocket, 0) ->
+    erltls:close(ListenSocket);
+session_reused_server(ListenSocket, N) ->
+    {ok, Socket} = erltls:transport_accept(ListenSocket),
+    ok = erltls:setopts(Socket, [{active, false}]),
+    ok = erltls:ssl_accept(Socket),
+    {ok, <<"foo">>} = erltls:recv(Socket, 0),
+    ok = erltls:close(Socket),
+    session_reused_server(ListenSocket, N-1).
+
+resume_client(Reused) ->
+    {ok, Socket} = erltls:connect("localhost", 10001, [binary, {use_session_ticket, true}, {active, false}], infinity),
+    Reused = erltls:session_reused(Socket),
+    erltls:send(Socket, "foo").

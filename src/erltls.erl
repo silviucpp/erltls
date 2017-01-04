@@ -153,15 +153,10 @@ getopts(#tlssocket{tcp_sock = TcpSock, ssl_pid = Pid}, OptionNames) ->
 -spec setopts(tlssocket(),  [gen_tcp:option()]) ->
     ok | {error, reason()}.
 
-setopts(#tlssocket{tcp_sock = TcpSock, ssl_pid = Pid}, Options) ->
+setopts(#tlssocket{ssl_pid = Pid}, Options) ->
     case erltls_options:get_inet_options(Options) of
         {ok, InetOpts, EmulatedOpts} ->
-            case set_inet_opts(TcpSock, InetOpts) of
-                ok ->
-                    erltls_ssl_process:set_emulated_options(Pid, EmulatedOpts);
-                Error ->
-                    Error
-            end;
+            erltls_ssl_process:setopts(Pid, InetOpts, EmulatedOpts);
         Error ->
             Error
     end.
@@ -292,11 +287,17 @@ recv(Socket, Length) ->
 -spec recv(tlssocket(), integer(), timeout()) -> {ok, binary()| list()} | {error, reason()}.
 
 recv(#tlssocket{tcp_sock = TcpSock, ssl_pid = Pid}, Length, Timeout) ->
-    case gen_tcp:recv(TcpSock, Length, Timeout) of
-        {ok, Packet} ->
-            erltls_ssl_process:decode_data(Pid, Packet);
-        Error ->
-            Error
+    %todo: fix this method and implement proper Length behaviour
+    case erltls_ssl_process:get_pending_data(Pid) of
+        <<>> ->
+            case gen_tcp:recv(TcpSock, Length, Timeout) of
+                {ok, Packet} ->
+                    erltls_ssl_process:decode_data(Pid, Packet);
+                Error ->
+                    Error
+            end;
+        PendingData ->
+            {ok, PendingData}
     end.
 
 -spec close(tlssocket()) -> term().
@@ -306,11 +307,6 @@ close(#tlssocket{ssl_pid = Pid, tcp_sock = TcpSocket}) ->
     gen_tcp:close(TcpSocket).
 
 %internals
-
-set_inet_opts(_TcpSock, []) ->
-    ok;
-set_inet_opts(TcpSock, Options) ->
-    inet:setopts(TcpSock, Options).
 
 do_connect(TcpSocket, TlsOpt, EmulatedOpts) ->
     UseSessionTicket = erltls_options:use_session_ticket(erltls_utils:lookup(use_session_ticket, TlsOpt)),
