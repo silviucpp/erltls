@@ -12,6 +12,13 @@ const char kAtomError[] = "error";
 const char kAtomBadArg[] = "badarg";
 const char kAtomOptions[] = "options";
 
+const char kAtomError_enoissuercert[] = "enoissuercert";
+const char kAtomError_epeercertexpired[] = "epeercertexpired";
+const char kAtomError_epeercertinvalid[] = "epeercertinvalid";
+const char kAtomError_eselfsignedcert[] = "eselfsignedcert";
+const char kAtomError_echaintoolong[] = "echaintoolong";
+const char kAtomError_epeercert[] = "epeercert";
+
 const char kAtomVerifyNone[] = "verify_none";
 const char kAtomVerifyPeer[] = "verify_peer";
 
@@ -48,6 +55,13 @@ int on_nif_load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     ATOMS.atomError = make_atom(env, kAtomError);
     ATOMS.atomOptions = make_atom(env, kAtomOptions);
     ATOMS.atomBadArg = make_atom(env, kAtomBadArg);
+
+    ATOMS.atomError_enoissuercert = make_atom(env, kAtomError_enoissuercert);
+    ATOMS.atomError_epeercertexpired = make_atom(env, kAtomError_epeercertexpired);
+    ATOMS.atomError_epeercertinvalid = make_atom(env, kAtomError_epeercertinvalid);
+    ATOMS.atomError_eselfsignedcert = make_atom(env, kAtomError_eselfsignedcert);
+    ATOMS.atomError_echaintoolong = make_atom(env, kAtomError_echaintoolong);
+    ATOMS.atomError_epeercert = make_atom(env, kAtomError_epeercert);
 
     ATOMS.atomVerifyNone = make_atom(env, kAtomVerifyNone);
     ATOMS.atomVerifyPeer = make_atom(env, kAtomVerifyPeer);

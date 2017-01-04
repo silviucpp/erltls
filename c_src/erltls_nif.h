@@ -12,6 +12,13 @@ struct atoms
     ERL_NIF_TERM atomBadArg;
     ERL_NIF_TERM atomOptions;
 
+    ERL_NIF_TERM atomError_enoissuercert;
+    ERL_NIF_TERM atomError_epeercertexpired;
+    ERL_NIF_TERM atomError_epeercertinvalid;
+    ERL_NIF_TERM atomError_eselfsignedcert;
+    ERL_NIF_TERM atomError_echaintoolong;
+    ERL_NIF_TERM atomError_epeercert;
+
     ERL_NIF_TERM atomVerifyNone;
     ERL_NIF_TERM atomVerifyPeer;
 

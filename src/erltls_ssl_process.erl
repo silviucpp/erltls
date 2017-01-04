@@ -382,11 +382,9 @@ change_active(TcpSocket, _CurrentMode, NewMode) ->
 
 do_handshake(TcpSocket, TlsSock) ->
     case erltls_nif:ssl_handshake(TlsSock) of
-        {ok, 1} ->
+        ok ->
+            %handshake completed
             send_pending(TcpSocket, TlsSock);
-        {ok, 0} ->
-            send_pending(TcpSocket, TlsSock),
-            {error, <<"handshake failed">>};
         {error, ?SSL_ERROR_WANT_READ} ->
             case send_pending(TcpSocket, TlsSock) of
                 ok ->

@@ -4,14 +4,22 @@
 #include "erltls_nif.h"
 #include "bytebuffer.h"
 
+#include <openssl/err.h>
 #include <cassert>
 
 //http://roxlu.com/2014/042/using-openssl-with-memory-bios
 
 static const int kTlsFrameSize = 16*1024;
 
-//@todo:
-//1. DoReadOp should be optimised
+void TlsSocket::SSlUserDataFree(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl, void *argp)
+{
+    UNUSED(parent);
+    UNUSED(ad);
+    UNUSED(idx);
+    UNUSED(argl);
+    UNUSED(argp);
+    enif_free(ptr);
+}
 
 TlsSocket::TlsSocket() : bio_read_(NULL), bio_write_(NULL), ssl_(NULL)
 {
@@ -63,6 +71,14 @@ bool TlsSocket::Init(SSL_CTX* ctx, kSslRole role, long flags, const std::string&
             SSL_SESSION_free(ssl_session);
         }
     }
+
+    scoped_ptr(ssl_data, ssl_user_data, reinterpret_cast<ssl_user_data*>(enif_alloc(sizeof(ssl_user_data))), enif_free);
+    ssl_data->peer_verify_result = ATOMS.atomOk;
+
+    if(!SSL_set_ex_data(ssl_, TlsManager::GetSslUserDataIndex(), ssl_data.get()))
+        return false;
+
+    ssl_data.release();
 
     if(role == kSslRoleServer)
         SSL_set_accept_state(ssl_);
@@ -129,10 +145,21 @@ ERL_NIF_TERM TlsSocket::Handshake(ErlNifEnv* env)
     
     int result = SSL_do_handshake(ssl_);
 
-    if(result < 0)
-        return make_error(env, enif_make_int(env, SSL_get_error(ssl_, result)));
+    if(result != 1)
+    {
+        int error = SSL_get_error(ssl_, result);
     
-    return make_ok_result(env, enif_make_int(env, result));
+        if(error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE)
+            return make_error(env, enif_make_int(env, error));
+        
+        ssl_user_data* data = reinterpret_cast<ssl_user_data*>(SSL_get_ex_data(ssl_, TlsManager::GetSslUserDataIndex()));
+        if(!enif_is_identical(data->peer_verify_result, ATOMS.atomOk))
+            return make_error(env, data->peer_verify_result);
+        else
+            return make_error(env, ERR_error_string(error, NULL));
+    }
+    
+    return ATOMS.atomOk;
 }
 
 ERL_NIF_TERM TlsSocket::DoReadOp(ErlNifEnv* env)

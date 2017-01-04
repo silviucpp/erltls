@@ -1,6 +1,9 @@
 #include "tlsmanager.h"
 #include "ssldh.h"
 #include "erl_nif.h"
+#include "erltls_nif.h"
+#include "nif_utils.h"
+#include "tlssocket.h"
 
 #include <openssl/rand.h>
 #include <openssl/err.h>
@@ -11,8 +14,11 @@ struct callback_data
     int verify_depth;
 };
 
-static int callback_data_index = -1;
 static char kCallbackDataTag[] = "callback_data";
+static char kSslUserDataTag[] = "ssl_user_data";
+
+static int callback_data_index = -1;
+static int ssl_user_data_index = -1;
 
 static void callback_data_free(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl, void *argp)
 {
@@ -36,6 +42,7 @@ void TlsManager::InitOpenSSL()
     OpenSSL_add_all_algorithms();
 
     callback_data_index = SSL_CTX_get_ex_new_index(0, reinterpret_cast<void*>(kCallbackDataTag), NULL, NULL, callback_data_free);
+    ssl_user_data_index = SSL_CTX_get_ex_new_index(0, reinterpret_cast<void*>(kSslUserDataTag), NULL, NULL, TlsSocket::SSlUserDataFree);
 }
 
 void TlsManager::CleanupOpenSSL()
@@ -48,6 +55,11 @@ void TlsManager::CleanupOpenSSL()
 #endif
 }
 
+int TlsManager::GetSslUserDataIndex()
+{
+    return ssl_user_data_index;
+}
+
 int TlsManager::VerifyCallback(int ok, X509_STORE_CTX *x509_ctx)
 {
     int cert_err = X509_STORE_CTX_get_error(x509_ctx);
@@ -55,11 +67,12 @@ int TlsManager::VerifyCallback(int ok, X509_STORE_CTX *x509_ctx)
     SSL *ssl = reinterpret_cast<SSL*>(X509_STORE_CTX_get_ex_data(x509_ctx, SSL_get_ex_data_X509_STORE_CTX_idx()));
     SSL_CTX *ctx = SSL_get_SSL_CTX(ssl);
 
-    callback_data *cb_data = reinterpret_cast<callback_data*>(SSL_CTX_get_ex_data(ctx, callback_data_index));
+    callback_data* cb_data = reinterpret_cast<callback_data*>(SSL_CTX_get_ex_data(ctx, callback_data_index));
+    ssl_user_data* ssl_data = reinterpret_cast<ssl_user_data*>(SSL_get_ex_data(ssl, ssl_user_data_index));
 
     if (!ok && depth >= cb_data->verify_depth)
         ok = 1;
-    
+
     switch (cert_err)
     {
         case X509_V_OK:
@@ -69,29 +82,29 @@ int TlsManager::VerifyCallback(int ok, X509_STORE_CTX *x509_ctx)
 
         case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT:
         case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY:
-            //MAYBE_SET_ERRSTR("enoissuercert");
+            ssl_data->peer_verify_result = ATOMS.atomError_enoissuercert;
             break;
 
         case X509_V_ERR_CERT_HAS_EXPIRED:
-            //MAYBE_SET_ERRSTR("epeercertexpired");
+            ssl_data->peer_verify_result = ATOMS.atomError_epeercertexpired;
             break;
 
         case X509_V_ERR_CERT_NOT_YET_VALID:
         case X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD:
         case X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD:
-            //MAYBE_SET_ERRSTR("epeercertinvalid");
+            ssl_data->peer_verify_result = ATOMS.atomError_epeercertinvalid;
             break;
 
         case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
-            //MAYBE_SET_ERRSTR("eselfsignedcert");
+            ssl_data->peer_verify_result = ATOMS.atomError_eselfsignedcert;
             break;
 
         case X509_V_ERR_CERT_CHAIN_TOO_LONG:
-            //MAYBE_SET_ERRSTR("echaintoolong");
+            ssl_data->peer_verify_result = ATOMS.atomError_echaintoolong;
             break;
 
         default:
-            //MAYBE_SET_ERRSTR("epeercert");
+            ssl_data->peer_verify_result = ATOMS.atomError_epeercert;
             break;
     }
 

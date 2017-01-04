@@ -7,6 +7,11 @@
 #include "macros.h"
 #include "erl_nif.h"
 
+struct ssl_user_data
+{
+    ERL_NIF_TERM peer_verify_result;
+};
+
 class TlsSocket
 {
 public:
@@ -31,6 +36,8 @@ public:
     ERL_NIF_TERM GetSessionASN1(ErlNifEnv *env);
 
     ERL_NIF_TERM Shutdown(ErlNifEnv *env);
+
+    static void SSlUserDataFree(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl, void *argp);
 
 private:
 

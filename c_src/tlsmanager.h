@@ -40,6 +40,8 @@ public:
 
     static void InitOpenSSL();
     static void CleanupOpenSSL();
+    static int GetSslUserDataIndex();
+
     static SSL_CTX* CreateContext(const ContextProperties& props);
     static int VerifyCallback(int preverify_ok, X509_STORE_CTX* ctx);
     static int GetSSLVerifyFlags(int verify, bool fail_if_no_peer_cert);

@@ -159,7 +159,7 @@ test_handshake_failed(_Config) ->
         {verify, verify_none},
         {compression, compression_none}
     ],
-    {error, ?SSL_ERROR_SSL} = erltls:connect("google.com", 443, Opt),
+    {error, _} = erltls:connect("google.com", 443, Opt),
     true.
 
 test_owner_died(_Config) ->
