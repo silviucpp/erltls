@@ -99,8 +99,7 @@ ERL_NIF_TERM TlsSocket::Shutdown(ErlNifEnv* env)
     if(r < 0)
     {
         int error = SSL_get_error(ssl_, r);
-        std::string error_str = "SSL_shutdown failed with error: " + std::to_string(error);
-        return make_error(env, error_str.c_str());
+        return make_error(env, ERR_error_string(error, NULL));
     }
 
     return SendPending(env);
@@ -178,10 +177,7 @@ ERL_NIF_TERM TlsSocket::DoReadOp(ErlNifEnv* env)
         int error = SSL_get_error(ssl_, r);
         
         if(error != SSL_ERROR_WANT_READ)
-        {
-            std::string error_str = "DoReadOp failed with error: " + std::to_string(error);
-            return make_error(env, error_str.c_str());
-        }
+            return make_error(env, ERR_error_string(error, NULL));
     }
     
     return make_ok_result(env, make_binary(env, buff.Data(), buff.Length()));
