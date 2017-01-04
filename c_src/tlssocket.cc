@@ -6,6 +6,7 @@
 
 #include <openssl/err.h>
 #include <cassert>
+#include <memory>
 
 //http://roxlu.com/2014/042/using-openssl-with-memory-bios
 
