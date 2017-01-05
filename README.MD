@@ -87,9 +87,10 @@ A full handshake will be negotiated.
 
 - `session_reused/1` - Query, whether a reused session was negotiated during the handshake (make sense if session ticketing is enabled)
 
-### Known limitations
+### Current limitations
 
-- working only with `{packet, 0}` inet option 
+- working only with `{packet, 0}` inet option
+- when the owner is transferred to another process the messages already sent are not transferred as well.
 - When you use `recv/2` and `Length` > 0 it's not returning a number of bytes equal's with `Length`, basically reads `Length` bytes from
   the wire, decode them and returns the result. So it might be less bytes as time there is also the SSL/TLS record overhead counted.
 - Handshake process don't have a timeout implemented yet. So in `connect/*` or `ssl_accept/*` the timeout param is actually 
