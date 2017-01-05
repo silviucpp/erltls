@@ -141,7 +141,13 @@ ERL_NIF_TERM TlsSocket::SendData(ErlNifEnv* env, const ErlNifBinary* bin)
     ASSERT(bin->size > 0);
 
     int ret = SSL_write(ssl_, bin->data, static_cast<int>(bin->size));
-    ASSERT(ret > 0);
+
+    if(ret <= 0)
+    {
+        int error = SSL_get_error(ssl_, ret);
+        return make_error(env, ERR_error_string(error, NULL));
+    }
+
     return SendPending(env);
 }
 
