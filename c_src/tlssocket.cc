@@ -5,7 +5,6 @@
 #include "bytebuffer.h"
 
 #include <openssl/err.h>
-#include <cassert>
 #include <memory>
 
 //http://roxlu.com/2014/042/using-openssl-with-memory-bios
@@ -93,17 +92,26 @@ ERL_NIF_TERM TlsSocket::Shutdown(ErlNifEnv* env)
 {
     //Avoid calling SSL_shutdown() if handshake wasn't completed.
     if(!ssl_ || SSL_in_init(ssl_))
-        return ATOMS.atomOk;
-    
-    int r = SSL_shutdown(ssl_);
-    
-    if(r < 0)
+        return make_ok_result(env, enif_make_int(env, 1));
+
+    int ret = SSL_shutdown(ssl_);
+
+    if(ret < 0)
     {
-        int error = SSL_get_error(ssl_, r);
+        int error = SSL_get_error(ssl_, ret);
         return make_error(env, ERR_error_string(error, NULL));
     }
 
-    return SendPending(env);
+    int pending = BIO_pending(bio_write_);
+
+    if (!pending)
+        return make_ok_result(env, enif_make_int(env, ret));
+
+    ERL_NIF_TERM term;
+    unsigned char *destination_buffer = enif_make_new_binary(env, pending, &term);
+    int read_bytes = BIO_read(bio_write_, destination_buffer, pending);
+    ASSERT(read_bytes == pending);
+    return enif_make_tuple3(env, ATOMS.atomOk, enif_make_int(env, ret), term);
 }
 
 ERL_NIF_TERM TlsSocket::FeedData(ErlNifEnv* env, const ErlNifBinary* bin)
@@ -127,11 +135,13 @@ ERL_NIF_TERM TlsSocket::FeedData(ErlNifEnv* env, const ErlNifBinary* bin)
 
 ERL_NIF_TERM TlsSocket::SendData(ErlNifEnv* env, const ErlNifBinary* bin)
 {
-    assert(ssl_);
-    assert(bin->size > 0);
+    if(!ssl_)
+        return make_error(env, ATOMS.atomSslNotStarted);
+
+    ASSERT(bin->size > 0);
 
     int ret = SSL_write(ssl_, bin->data, static_cast<int>(bin->size));
-    assert(ret > 0);
+    ASSERT(ret > 0);
     return SendPending(env);
 }
 
@@ -164,8 +174,6 @@ ERL_NIF_TERM TlsSocket::Handshake(ErlNifEnv* env)
 
 ERL_NIF_TERM TlsSocket::DoReadOp(ErlNifEnv* env)
 {
-    assert(ssl_);
-    
     ByteBuffer buff(kTlsFrameSize);
     uint8_t buffer[kTlsFrameSize];
     int r;
@@ -200,7 +208,7 @@ ERL_NIF_TERM TlsSocket::SendPending(ErlNifEnv* env)
     
     unsigned char *destination_buffer = enif_make_new_binary(env, pending, &term);
     int read_bytes = BIO_read(bio_write_, destination_buffer, pending);
-    assert(read_bytes == pending);
+    ASSERT(read_bytes == pending);
 
     return make_ok_result(env, term);
 }

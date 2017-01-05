@@ -73,7 +73,6 @@ A full handshake will be negotiated.
 ### Unsupported SSL methods:
 
 - `versions/1`
-- `shutdown/2`
 - `renegotiate/1`
 - `prf/5`
 - `negotiated_protocol/1`

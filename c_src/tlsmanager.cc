@@ -8,7 +8,6 @@
 #include <openssl/rand.h>
 #include <openssl/err.h>
 #include <memory>
-#include <cassert>
 
 struct callback_data
 {
@@ -173,7 +172,7 @@ SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
         }
     }
 
-    assert(props.ciphers.empty() == false);
+    ASSERT(props.ciphers.empty() == false);
     
     if(!SSL_CTX_set_cipher_list(ctx.get(), props.ciphers.c_str()))
         return NULL;

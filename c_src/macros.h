@@ -9,4 +9,11 @@
 
 #define scoped_ptr(Name, Type, New, Free) std::unique_ptr<Type, decltype(&Free)>Name (New, &Free)
 
+#ifdef NDEBUG
+#define ASSERT(x) UNUSED(x)
+#else
+#include <assert.h>
+#define ASSERT(x) assert(x)
+#endif
+
 #endif

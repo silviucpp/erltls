@@ -41,7 +41,8 @@
     session_reused/1,
     get_session_asn1/1,
     get_pending_data/1,
-    peercert/1
+    peercert/1,
+    stop_process/1
 ]).
 
 new(TcpSocket, TlsOptions, EmulatedOpts, Role) ->
@@ -213,7 +214,7 @@ handle_call(session_reused, _From, #state{tls_ref = TlsRef} = State) ->
     {reply, erltls_nif:ssl_session_reused(TlsRef), State};
 
 handle_call(shutdown, _From, #state{tcp = TcpSocket, tls_ref = TlsRef} = State) ->
-    {stop, normal, shutdown_ssl(TcpSocket, TlsRef), State};
+    {reply, shutdown_ssl(TcpSocket, TlsRef), State};
 
 handle_call(close, _From, State) ->
     {stop, normal, ok, State};
@@ -426,10 +427,10 @@ send_pending(TcpSocket, TlsSock) ->
 
 shutdown_ssl(TcpSocket, TlsRef) ->
     case erltls_nif:ssl_shutdown(TlsRef) of
-        {ok, Bytes} ->
-            gen_tcp:send(TcpSocket, Bytes);
-        ok ->
+        {ok, _Completed} ->
             ok;
+        {ok, _Completed, PendingData} ->
+            gen_tcp:send(TcpSocket, PendingData);
         Error ->
             ?ERROR_MSG("shutdown unexpected error:~p", [Error]),
             Error

@@ -27,7 +27,8 @@ groups() -> [
         test_list_mode,
         test_server_mode,
         test_session_reused_ticket,
-        test_peercert
+        test_peercert,
+        test_shutdown
     ]}
 ].
 
@@ -378,4 +379,39 @@ test_peercert(_Config) ->
     {ok, Cert} = erltls:peercert(Socket),
     true = is_record(public_key:pkix_decode_cert(Cert, plain), 'Certificate'),
     ok = erltls:close(Socket),
+    true.
+
+
+test_shutdown(_Config) ->
+    Port = 12000,
+    Opt = [
+        binary,
+        {exit_on_close, false},
+        {active, false},
+        {ciphers, ["AES128-GCM-SHA256"]},
+        {verify, verify_none},
+        {compression, compression_none}
+    ],
+
+    {ok, LSocket} = erltls:listen(Port, [{certfile, get_certificate()} | Opt]),
+
+    ClientProc = fun() ->
+        {ok, CSocket} = erltls:connect("127.0.0.1", Port, Opt),
+        ok = erltls:send(CSocket, <<"PING">>),
+        ok = erltls:shutdown(CSocket, write),
+        true = is_process_alive(CSocket#tlssocket.ssl_pid),
+        {ok, <<"PONG">> } = erltls:recv(CSocket, 0),
+        ok = erltls:close(CSocket),
+        false = is_process_alive(CSocket#tlssocket.ssl_pid)
+    end,
+
+    spawn(ClientProc),
+
+    {ok, Socket} = erltls:transport_accept(LSocket, 5000),
+    ok = erltls:ssl_accept(Socket),
+
+    {ok, <<"PING">> } = erltls:recv(Socket, 0),
+    ok = erltls:send(Socket, <<"PONG">>),
+    ok = erltls:close(Socket),
+    ok = erltls:close(LSocket),
     true.

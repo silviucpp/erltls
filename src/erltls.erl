@@ -36,7 +36,8 @@
     send/2,
     recv/2,
     recv/3,
-    close/1
+    close/1,
+    shutdown/2
 ]).
 
 -spec start() -> ok  | {error, reason()}.
@@ -124,6 +125,7 @@ connect(Host, Port, Options, Timeout) ->
     ok | {error, reason()}.
 
 controlling_process(#tlssocket{ssl_pid = Pid}, NewOwner) ->
+    %todo: implement also message transfer
     erltls_ssl_process:controlling_process(Pid, NewOwner).
 
 -spec getopts(tlssocket(), [gen_tcp:option_name()]) ->
@@ -311,7 +313,19 @@ recv(#tlssocket{tcp_sock = TcpSock, ssl_pid = Pid}, Length, Timeout) ->
 
 close(#tlssocket{ssl_pid = Pid, tcp_sock = TcpSocket}) ->
     erltls_ssl_process:shutdown(Pid),
+    erltls_ssl_process:stop_process(Pid),
     gen_tcp:close(TcpSocket).
+
+-spec shutdown(tlssocket(), read | write | read_write) ->  ok | {error, reason()}.
+
+shutdown(#tlssocket{tcp_sock = TcpSocket, ssl_pid = Pid}, How)->
+    case How =:= write orelse How =:= read_write of
+        true ->
+            erltls_ssl_process:shutdown(Pid);
+        _ ->
+            ok
+    end,
+    gen_tcp:shutdown(TcpSocket, How).
 
 %internals
 
