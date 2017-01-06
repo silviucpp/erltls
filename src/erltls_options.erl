@@ -91,7 +91,7 @@ is_tls_option(Key) ->
         %options available in both ssl and erltls
         certfile, dhfile, cacerts, ciphers, verify, depth, fail_if_no_peer_cert,
         %options available only in erltls
-        compression, use_session_ticket, reuse_sessions_ttl,
+        compression, use_session_ticket, reuse_sessions_ttl, protocol,
         % todo: implement the following options:
         verify_fun, cert, key, keyfile, password,
         cacertfile, dh, user_lookup_fun, psk_identity, srp_identity, ssl_imp,

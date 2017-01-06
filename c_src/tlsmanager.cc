@@ -113,7 +113,7 @@ int TlsManager::VerifyCallback(int ok, X509_STORE_CTX *x509_ctx)
 
 SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
 {
-    scoped_ptr(ctx, SSL_CTX, SSL_CTX_new(SSLv23_method()), SSL_CTX_free);
+    scoped_ptr(ctx, SSL_CTX, SSL_CTX_new(props.tls_proto), SSL_CTX_free);
     
     if(!ctx.get())
         return NULL;

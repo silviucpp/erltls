@@ -12,6 +12,7 @@
 struct ContextProperties
 {
     ContextProperties() :
+        tls_proto(SSLv23_method()),
         reuse_sessions_ttl_sec(300),
         use_session_ticket(false),
         fail_if_no_peer_cert(false),
@@ -19,6 +20,7 @@ struct ContextProperties
         verify_mode(VERIFY_NONE)
     {}
 
+    const SSL_METHOD* tls_proto;
     std::string cert_file;
     std::string ciphers;
     std::string dh_file;

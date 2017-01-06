@@ -12,6 +12,12 @@ that all calls for the same socket are not executed concurrently each socket has
 This way we don't have to use any kind of locking at native level. Also read/write operations are not taking place in the
 `gen_server` process, they take place in calling process, in order to avoid gen_server to become a bottleneck for the socket. 
    
+### Features not available in standard Erlang ssl
+
+- DTLS support (both v1 and v1.2)
+- RFC5077 for resuming sessions using ticketing   
+- Compression support 
+
 ### User guide
 
 Add `erltls` as a rebar dependency to your project:
@@ -69,6 +75,9 @@ Options currently related to `erltls` only:
 In case the key is not specified the tickets will be signed using a random key. In order to specify the key use the format `{true, <<"key_here">>}`.
 - `{reuse_sessions_ttl, integer()}` - The TTL of a session in seconds. In case the session is older than this TTL will not be possible to be reused. 
 A full handshake will be negotiated. 
+- `{protocol, protocol()}` - Specify the desired protocol. By default will negotiate highest available SSL/TLS version. Available protocols values are:
+`sslv3 | tlsv1 | 'tlsv1.1' | 'tlsv1.2' | dtlsv1 | 'dtlsv1.2'`
+
 
 ### Unsupported SSL methods:
 
@@ -79,7 +88,6 @@ A full handshake will be negotiated.
 - `format_error/1`
 - `eccs/1`
 - `eccs/0`
-- `connection_information/1`
 - `connection_information/2`
 
 ### SSL methods related to erltls

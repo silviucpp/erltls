@@ -291,22 +291,76 @@ ERL_NIF_TERM TlsSocket::GetSslMethod(ErlNifEnv* env)
     //from ssl/ssl_lib.c
 
     std::string version = SSL_get_version(ssl_);
+    ERL_NIF_TERM term;
 
-    if(version == "TLSv1.3")
-        return make_ok_result(env, ATOMS.atomSSLMethodTLSv1_3);
-    else if(version == "TLSv1.2")
-        return make_ok_result(env, ATOMS.atomSSLMethodTLSv1_2);
-    else if(version == "TLSv1.1")
-        return make_ok_result(env, ATOMS.atomSSLMethodTLSv1_1);
-    else if(version == "TLSv1")
-        return make_ok_result(env, ATOMS.atomSSLMethodTLSv1);
-    else if(version == "SSLv3")
-        return make_ok_result(env, ATOMS.atomSSLMethodSSLv3);
-    else if(version == "DTLSv1.2")
-        return make_ok_result(env, ATOMS.atomSSLMethodDTLSv1_2);
-    else if(version == "DTLSv1")
-        return make_ok_result(env, ATOMS.atomSSLMethodDTLSv1);
+    if(ProtocolToAtom(version, &term))
+        return make_ok_result(env, term);
 
     return make_error(env, version.c_str());
 }
 
+ERL_NIF_TERM TlsSocket::GetSessionInfo(ErlNifEnv* env)
+{
+    if(!ssl_)
+        return make_error(env, ATOMS.atomSslNotStarted);
+
+    std::string version = SSL_get_version(ssl_);
+    const SSL_CIPHER* cipher = SSL_get_current_cipher(ssl_);
+
+    if(cipher == NULL)
+        return make_error(env, ATOMS.atomSslNotStarted);
+
+    ERL_NIF_TERM protocol_term;
+
+    if(!ProtocolToAtom(version, &protocol_term))
+        return make_error(env, ATOMS.atomSslNotStarted);
+
+    std::string cipher_name = SSL_CIPHER_get_name(cipher);
+    ERL_NIF_TERM cipher_term = make_binary(env, reinterpret_cast<const uint8_t*>(cipher_name.c_str()), cipher_name.length());
+
+    ERL_NIF_TERM protocol_item = enif_make_tuple(env, 2, ATOMS.atomCtxTlsProtocol, protocol_term);
+    ERL_NIF_TERM cipher_item = enif_make_tuple(env, 2, ATOMS.atomSslCipherSuite, cipher_term);
+
+    return make_ok_result(env, enif_make_list(env, 2, protocol_item, cipher_item));
+}
+
+bool TlsSocket::ProtocolToAtom(const std::string& protocol, ERL_NIF_TERM* term)
+{
+    if(protocol == "TLSv1.3")
+    {
+        *term = ATOMS.atomSSLMethodTLSv1_3;
+        return true;
+    }
+    else if(protocol == "TLSv1.2")
+    {
+        *term = ATOMS.atomSSLMethodTLSv1_2;
+        return true;
+    }
+    else if(protocol == "TLSv1.1")
+    {
+        *term = ATOMS.atomSSLMethodTLSv1_1;
+        return true;
+    }
+    else if(protocol == "TLSv1")
+    {
+        *term = ATOMS.atomSSLMethodTLSv1;
+        return true;
+    }
+    else if(protocol == "SSLv3")
+    {
+        *term = ATOMS.atomSSLMethodSSLv3;
+        return true;
+    }
+    else if(protocol == "DTLSv1.2")
+    {
+        *term = ATOMS.atomSSLMethodDTLSv1_2;
+        return true;
+    }
+    else if(protocol == "DTLSv1")
+    {
+        *term = ATOMS.atomSSLMethodDTLSv1;
+        return true;
+    }
+
+    return false;
+}

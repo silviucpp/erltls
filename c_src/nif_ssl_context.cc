@@ -93,6 +93,23 @@ ERL_NIF_TERM parse_context_props(ErlNifEnv* env, ERL_NIF_TERM list, ContextPrope
             else
                 return make_bad_options(env, head);
         }
+        else if(enif_is_identical(key, ATOMS.atomCtxTlsProtocol))
+        {
+            if(enif_is_identical(value, ATOMS.atomSSLMethodTLSv1_2))
+                props->tls_proto = TLSv1_2_method();
+            else if(enif_is_identical(value, ATOMS.atomSSLMethodTLSv1_1))
+                props->tls_proto = TLSv1_1_method();
+            else if(enif_is_identical(value, ATOMS.atomSSLMethodTLSv1))
+                props->tls_proto = TLSv1_method();
+            else if(enif_is_identical(value, ATOMS.atomSSLMethodSSLv3))
+                props->tls_proto = SSLv3_method();
+            else if(enif_is_identical(value, ATOMS.atomSSLMethodDTLSv1_2))
+                props->tls_proto = DTLSv1_2_method();
+            else if(enif_is_identical(value, ATOMS.atomSSLMethodDTLSv1))
+                props->tls_proto = DTLSv1_method();
+            else
+                return make_bad_options(env, head);
+        }
     }
     
     return ATOMS.atomOk;

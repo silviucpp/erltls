@@ -48,7 +48,9 @@
     get_session_asn1/1,
     get_pending_data/1,
     peercert/1,
-    stop_process/1
+    stop_process/1,
+    protocol/1,
+    session_info/1
 ]).
 
 new(TcpSocket, TlsOptions, EmulatedOpts, Role) ->
@@ -105,6 +107,12 @@ peercert(Pid) ->
 
 setopts(Pid, InetOpts, EmulatedOpts) ->
     call(Pid, {setopts, InetOpts, EmulatedOpts}).
+
+protocol(Pid) ->
+    call(Pid, get_protocol).
+
+session_info(Pid) ->
+    call(Pid, get_session_info).
 
 %internals for gen_server
 
@@ -239,6 +247,12 @@ handle_call({downgrade, NewOwner, Timeout}, _From, #state{tcp = TcpSocket, tls_r
         Error ->
             {reply, Error, State}
     end;
+
+handle_call(get_protocol, _From, #state{tls_ref = TlsRef} = State) ->
+    {reply, erltls_nif:ssl_get_method(TlsRef), State};
+
+handle_call(get_session_info, _From, #state{tls_ref = TlsRef} = State) ->
+    {reply, erltls_nif:ssl_get_session_info(TlsRef), State};
 
 handle_call(close, _From, State) ->
     {stop, normal, ok, State};

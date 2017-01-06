@@ -32,7 +32,9 @@ const char kAtomVerifyNone[] = "verify_none";
 const char kAtomVerifyPeer[] = "verify_peer";
 
 const char kAtomSllNotStarted[] = "ssl_not_started";
+const char kAtomSslCipherSuite[] = "cipher_suite";
 
+const char kAtomCtxTlsProtocol[] = "protocol";
 const char kAtomCtxCertfile[] = "certfile";
 const char kAtomCtxDhfile[] = "dhfile";
 const char kAtomCtxCacerts[] = "cacerts";
@@ -85,7 +87,9 @@ int on_nif_load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     ATOMS.atomVerifyPeer = make_atom(env, kAtomVerifyPeer);
 
     ATOMS.atomSslNotStarted = make_atom(env, kAtomSllNotStarted);
+    ATOMS.atomSslCipherSuite = make_atom(env, kAtomSslCipherSuite);
 
+    ATOMS.atomCtxTlsProtocol = make_atom(env, kAtomCtxTlsProtocol);
     ATOMS.atomCtxCertfile = make_atom(env, kAtomCtxCertfile);
     ATOMS.atomCtxDhfile = make_atom(env, kAtomCtxDhfile);
     ATOMS.atomCtxCacerts = make_atom(env, kAtomCtxCacerts);
@@ -138,6 +142,7 @@ static ErlNifFunc nif_funcs[] =
     {"ssl_session_reused", 1, enif_ssl_socket_session_reused},
     {"ssl_peercert", 1, enif_ssl_socket_peercert},
     {"ssl_get_method", 1, enif_ssl_socket_get_method},
+    {"ssl_get_session_info", 1, enif_ssl_socket_get_session_info},
     {"ssl_shutdown", 2, enif_ssl_socket_shutdown},
 };
 

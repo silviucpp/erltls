@@ -22,6 +22,7 @@
     getstat/1,
     getstat/2,
     peercert/1,
+    connection_information/1,
     peername/1,
     sockname/1,
     session_reused/1,
@@ -192,6 +193,11 @@ peername(#tlssocket{tcp_sock = TcpSock}) ->
 
 sockname(#tlssocket{tcp_sock = TcpSock}) ->
     inet:sockname(TcpSock).
+
+-spec connection_information(tlssocket()) -> {ok, list()} | {error, reason()}.
+
+connection_information(#tlssocket{ssl_pid = Pid}) ->
+    erltls_ssl_process:session_info(Pid).
 
 -spec session_reused(tlssocket()) -> boolean() | {error, reason()}.
 

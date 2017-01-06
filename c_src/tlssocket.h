@@ -52,6 +52,7 @@ public:
     ERL_NIF_TERM GetSessionASN1(ErlNifEnv *env);
     ERL_NIF_TERM GetPeerCert(ErlNifEnv *env);
     ERL_NIF_TERM GetSslMethod(ErlNifEnv* env);
+    ERL_NIF_TERM GetSessionInfo(ErlNifEnv* env);
 
     static void SSlUserDataFree(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl, void *argp);
 
@@ -63,6 +64,7 @@ private:
     ERL_NIF_TERM DoHandshakeOp(ErlNifEnv *env);
     ERL_NIF_TERM DoReadOp(ErlNifEnv *env);
     ERL_NIF_TERM GetPendingData(ErlNifEnv *env, int pending);
+    bool ProtocolToAtom(const std::string& protocol, ERL_NIF_TERM* term);
     
     SocketOwner owner_;
     BIO* bio_read_;

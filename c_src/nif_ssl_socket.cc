@@ -212,6 +212,20 @@ ERL_NIF_TERM enif_ssl_socket_get_method(ErlNifEnv* env, int argc, const ERL_NIF_
     return wp->socket->GetSslMethod(env);
 }
 
+ERL_NIF_TERM enif_ssl_socket_get_session_info(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+    UNUSED(argc);
+
+    erltls_data* data = static_cast<erltls_data*>(enif_priv_data(env));
+
+    enif_ssl_socket* wp = NULL;
+
+    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, (void**) &wp))
+        return make_badarg(env);
+
+    return wp->socket->GetSessionInfo(env);
+}
+
 ERL_NIF_TERM enif_ssl_socket_shutdown(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     UNUSED(argc);

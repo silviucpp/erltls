@@ -30,7 +30,8 @@ groups() -> [
         test_peercert,
         test_shutdown,
         downgrade_to_tcp,
-        upgrade_to_tls
+        upgrade_to_tls,
+        test_dtls_mode
     ]}
 ].
 
@@ -494,4 +495,45 @@ upgrade_to_tls(_Config) ->
     ok = erltls:close(SslS_Sock),
 
     ok = gen_tcp:close(LSocket),
+    true.
+
+test_dtls_mode(_Config) ->
+    Port = 10000,
+    Opt = [
+        binary,
+        {packet, 0},
+        {active, false},
+        {ciphers, ["AES128-GCM-SHA256"]},
+        {verify, verify_none},
+        {protocol, 'dtlsv1.2'},
+        {compression, compression_none}
+    ],
+
+    {ok, LSocket} = erltls:listen(Port, [{certfile, get_certificate()} | Opt]),
+
+    ClientProc = fun() ->
+        {ok, CSocket} = erltls:connect("127.0.0.1", Port, Opt),
+        ok = erltls:send(CSocket, <<"HELLO">>),
+        ok = erltls:setopts(CSocket, [{active, once}]),
+        receive
+            {ssl, CSocket, <<"HELLO">>} ->
+                ok = erltls:close(CSocket);
+            Msg ->
+                throw(Msg)
+        end
+                 end,
+
+    spawn(ClientProc),
+
+    {ok, Socket} = erltls:transport_accept(LSocket, 5000),
+    ok = erltls:ssl_accept(Socket),
+
+    {ok, L } = erltls:connection_information(Socket),
+    'dtlsv1.2' = erltls_utils:lookup(protocol, L),
+
+    {ok, Data} = erltls:recv(Socket, 0),
+    <<"HELLO">> = Data,
+    ok = erltls:send(Socket, Data),
+    ok = erltls:close(Socket),
+    ok = erltls:close(LSocket),
     true.

@@ -32,7 +32,9 @@ struct atoms
     ERL_NIF_TERM atomVerifyPeer;
 
     ERL_NIF_TERM atomSslNotStarted;
+    ERL_NIF_TERM atomSslCipherSuite;
 
+    ERL_NIF_TERM atomCtxTlsProtocol;
     ERL_NIF_TERM atomCtxCertfile;
     ERL_NIF_TERM atomCtxDhfile;
     ERL_NIF_TERM atomCtxCacerts;

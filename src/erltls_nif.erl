@@ -18,7 +18,8 @@
     ssl_session_reused/1,
     ssl_get_session_asn1/1,
     ssl_peercert/1,
-    ssl_get_method/1
+    ssl_get_method/1,
+    ssl_get_session_info/1
 ]).
 
 %% nif functions
@@ -81,4 +82,7 @@ ssl_peercert(_SocketRef) ->
     ?NOT_LOADED.
 
 ssl_get_method(_SocketRef) ->
+    ?NOT_LOADED.
+
+ssl_get_session_info(_SocketRef) ->
     ?NOT_LOADED.

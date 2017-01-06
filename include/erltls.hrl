@@ -13,6 +13,7 @@
     {cacerts, [Der::binary()]} |
     {dhfile, path()} |
     {ciphers, ciphers()} |
+    {protocol, protocol()} |
     {compression, compression_type()} |
     {reuse_sessions_ttl, integer()} |
     {use_session_ticket, boolean() | {boolean(), binary()}}.
