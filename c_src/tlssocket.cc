@@ -88,11 +88,14 @@ bool TlsSocket::Init(SSL_CTX* ctx, kSslRole role, long flags, const std::string&
     return true;
 }
 
-ERL_NIF_TERM TlsSocket::Shutdown(ErlNifEnv* env)
+ERL_NIF_TERM TlsSocket::Shutdown(ErlNifEnv* env, const ErlNifBinary* bin)
 {
     //Avoid calling SSL_shutdown() if handshake wasn't completed.
     if(!ssl_ || SSL_in_init(ssl_))
         return make_ok_result(env, enif_make_int(env, 1));
+
+    if(bin->size)
+        FeedData(env, bin);
 
     int ret = SSL_shutdown(ssl_);
 
@@ -107,11 +110,7 @@ ERL_NIF_TERM TlsSocket::Shutdown(ErlNifEnv* env)
     if (!pending)
         return make_ok_result(env, enif_make_int(env, ret));
 
-    ERL_NIF_TERM term;
-    unsigned char *destination_buffer = enif_make_new_binary(env, pending, &term);
-    int read_bytes = BIO_read(bio_write_, destination_buffer, pending);
-    ASSERT(read_bytes == pending);
-    return enif_make_tuple3(env, ATOMS.atomOk, enif_make_int(env, ret), term);
+    return enif_make_tuple3(env, ATOMS.atomOk, enif_make_int(env, ret), GetPendingData(env, pending));
 }
 
 ERL_NIF_TERM TlsSocket::FeedData(ErlNifEnv* env, const ErlNifBinary* bin)
@@ -212,11 +211,16 @@ ERL_NIF_TERM TlsSocket::SendPending(ErlNifEnv* env)
         return make_ok_result(env, term);
     }
     
+    return make_ok_result(env, GetPendingData(env, pending));
+}
+
+ERL_NIF_TERM TlsSocket::GetPendingData(ErlNifEnv *env, int pending)
+{
+    ERL_NIF_TERM term;
     unsigned char *destination_buffer = enif_make_new_binary(env, pending, &term);
     int read_bytes = BIO_read(bio_write_, destination_buffer, pending);
     ASSERT(read_bytes == pending);
-
-    return make_ok_result(env, term);
+    return term;
 }
 
 ERL_NIF_TERM TlsSocket::IsSessionReused(ErlNifEnv* env)
@@ -279,4 +283,30 @@ ERL_NIF_TERM TlsSocket::GetPeerCert(ErlNifEnv *env)
     return make_ok_result(env, make_binary(env, cert_str.get(), len));
 }
 
+ERL_NIF_TERM TlsSocket::GetSslMethod(ErlNifEnv* env)
+{
+    if(!ssl_)
+        return make_error(env, ATOMS.atomSslNotStarted);
+
+    //from ssl/ssl_lib.c
+
+    std::string version = SSL_get_version(ssl_);
+
+    if(version == "TLSv1.3")
+        return make_ok_result(env, ATOMS.atomSSLMethodTLSv1_3);
+    else if(version == "TLSv1.2")
+        return make_ok_result(env, ATOMS.atomSSLMethodTLSv1_2);
+    else if(version == "TLSv1.1")
+        return make_ok_result(env, ATOMS.atomSSLMethodTLSv1_1);
+    else if(version == "TLSv1")
+        return make_ok_result(env, ATOMS.atomSSLMethodTLSv1);
+    else if(version == "SSLv3")
+        return make_ok_result(env, ATOMS.atomSSLMethodSSLv3);
+    else if(version == "DTLSv1.2")
+        return make_ok_result(env, ATOMS.atomSSLMethodDTLSv1_2);
+    else if(version == "DTLSv1")
+        return make_ok_result(env, ATOMS.atomSSLMethodDTLSv1);
+
+    return make_error(env, version.c_str());
+}
 

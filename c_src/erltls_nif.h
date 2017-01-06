@@ -12,6 +12,14 @@ struct atoms
     ERL_NIF_TERM atomBadArg;
     ERL_NIF_TERM atomOptions;
 
+    ERL_NIF_TERM atomSSLMethodSSLv3;
+    ERL_NIF_TERM atomSSLMethodTLSv1;
+    ERL_NIF_TERM atomSSLMethodTLSv1_1;
+    ERL_NIF_TERM atomSSLMethodTLSv1_2;
+    ERL_NIF_TERM atomSSLMethodTLSv1_3;
+    ERL_NIF_TERM atomSSLMethodDTLSv1;
+    ERL_NIF_TERM atomSSLMethodDTLSv1_2;
+
     ERL_NIF_TERM atomError_enoissuercert;
     ERL_NIF_TERM atomError_epeercertexpired;
     ERL_NIF_TERM atomError_epeercertinvalid;

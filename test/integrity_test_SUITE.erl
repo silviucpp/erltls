@@ -28,7 +28,9 @@ groups() -> [
         test_server_mode,
         test_session_reused_ticket,
         test_peercert,
-        test_shutdown
+        test_shutdown,
+        downgrade_to_tcp,
+        upgrade_to_tls
     ]}
 ].
 
@@ -414,4 +416,82 @@ test_shutdown(_Config) ->
     ok = erltls:send(Socket, <<"PONG">>),
     ok = erltls:close(Socket),
     ok = erltls:close(LSocket),
+    true.
+
+downgrade_to_tcp(_Config) ->
+    Port = 12000,
+    Opt = [
+        binary,
+        {exit_on_close, false},
+        {active, false},
+        {ciphers, ["AES128-GCM-SHA256"]},
+        {verify, verify_none}
+    ],
+
+    {ok, LSocket} = erltls:listen(Port, [{certfile, get_certificate()} | Opt]),
+
+    ClientProc = fun() ->
+        {ok, CSocket} = erltls:connect("127.0.0.1", Port, Opt),
+        ok = erltls:send(CSocket, <<"PING">>),
+        {ok, <<"PONG">> } = erltls:recv(CSocket, 0),
+
+        {ok, TcpSocket} = erltls:close(CSocket, {self(), infinity}),
+        {ok, <<"PLAIN_DATA">>} = gen_tcp:recv(TcpSocket, 0),
+        ok = gen_tcp:send(TcpSocket, <<"PLAIN_RESPONSE">>),
+        ok = gen_tcp:close(TcpSocket)
+                 end,
+
+    spawn(ClientProc),
+
+    {ok, Socket} = erltls:transport_accept(LSocket),
+    ok = erltls:ssl_accept(Socket),
+    {ok, <<"PING">> } = erltls:recv(Socket, 0),
+    ok = erltls:send(Socket, <<"PONG">>),
+    {ok, TcpSocket} = erltls:close(Socket, {self(), infinity}),
+
+    ok = gen_tcp:send(TcpSocket, <<"PLAIN_DATA">>),
+    {ok, <<"PLAIN_RESPONSE">>} = gen_tcp:recv(TcpSocket, 0),
+    ok = gen_tcp:close(TcpSocket),
+    ok = erltls:close(LSocket),
+    true.
+
+upgrade_to_tls(_Config) ->
+    Port = 12000,
+    InetOpt = [
+        binary,
+        {exit_on_close, false},
+        {active, false}
+    ],
+
+    SslOpt = [
+        {ciphers, ["AES128-GCM-SHA256"]},
+        {verify, verify_none}
+    ],
+
+    {ok, LSocket} = gen_tcp:listen(Port, InetOpt),
+
+    ClientProc = fun() ->
+        {ok, CSocket} = gen_tcp:connect("127.0.0.1", Port, InetOpt),
+        ok = gen_tcp:send(CSocket, <<"PING">>),
+        {ok, <<"PONG">> } = gen_tcp:recv(CSocket, 0),
+
+        {ok, TlsSock} = erltls:connect(CSocket, SslOpt),
+        ok = erltls:send(TlsSock, <<"PING">>),
+        {ok, <<"PONG">> } = erltls:recv(TlsSock, 0),
+
+        ok = erltls:close(TlsSock)
+                 end,
+
+    spawn(ClientProc),
+
+    {ok, TcpSocket} = gen_tcp:accept(LSocket),
+    {ok, <<"PING">>} = gen_tcp:recv(TcpSocket, 0),
+    ok = gen_tcp:send(TcpSocket, <<"PONG">>),
+
+    {ok, SslS_Sock} = erltls:ssl_accept(TcpSocket, [{certfile, get_certificate()} | SslOpt]),
+    {ok, <<"PING">> } = erltls:recv(SslS_Sock, 0),
+    ok = erltls:send(SslS_Sock, <<"PONG">>),
+    ok = erltls:close(SslS_Sock),
+
+    ok = gen_tcp:close(LSocket),
     true.

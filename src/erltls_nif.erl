@@ -13,10 +13,11 @@
     ssl_send_pending/1,
     ssl_feed_data/2,
     ssl_send_data/2,
-    ssl_shutdown/1,
+    ssl_shutdown/2,
     ssl_session_reused/1,
     ssl_get_session_asn1/1,
-    ssl_peercert/1
+    ssl_peercert/1,
+    ssl_get_method/1
 ]).
 
 %% nif functions
@@ -63,7 +64,7 @@ ssl_feed_data(_SocketRef, _Bin) ->
 ssl_send_data(_SocketRef, _Bin) ->
     ?NOT_LOADED.
 
-ssl_shutdown(_SocketRef) ->
+ssl_shutdown(_SocketRef, _Buff) ->
     ?NOT_LOADED.
 
 ssl_session_reused(_SocketRef) ->
@@ -73,4 +74,7 @@ ssl_get_session_asn1(_SocketRef) ->
     ?NOT_LOADED.
 
 ssl_peercert(_SocketRef) ->
+    ?NOT_LOADED.
+
+ssl_get_method(_SocketRef) ->
     ?NOT_LOADED.

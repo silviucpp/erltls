@@ -12,6 +12,14 @@ const char kAtomError[] = "error";
 const char kAtomBadArg[] = "badarg";
 const char kAtomOptions[] = "options";
 
+const char kAtomSSLMethodSSLv3[] = "sslv3";
+const char kAtomSSLMethodTLSv1[] = "tlsv1";
+const char kAtomSSLMethodTLSv1_1[] = "tlsv1.1";
+const char kAtomSSLMethodTLSv1_2[] = "tlsv1.2";
+const char kAtomSSLMethodTLSv1_3[] = "tlsv1.3";
+const char kAtomSSLMethodDTLSv1[] = "dtlsv1";
+const char kAtomSSLMethodDTLSv1_2[] = "dtlsv1.2";
+
 const char kAtomError_enoissuercert[] = "enoissuercert";
 const char kAtomError_epeercertexpired[] = "epeercertexpired";
 const char kAtomError_epeercertinvalid[] = "epeercertinvalid";
@@ -56,6 +64,14 @@ int on_nif_load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     ATOMS.atomError = make_atom(env, kAtomError);
     ATOMS.atomOptions = make_atom(env, kAtomOptions);
     ATOMS.atomBadArg = make_atom(env, kAtomBadArg);
+
+    ATOMS.atomSSLMethodSSLv3 = make_atom(env, kAtomSSLMethodSSLv3);
+    ATOMS.atomSSLMethodTLSv1 = make_atom(env, kAtomSSLMethodTLSv1);
+    ATOMS.atomSSLMethodTLSv1_1 = make_atom(env, kAtomSSLMethodTLSv1_1);
+    ATOMS.atomSSLMethodTLSv1_2 = make_atom(env, kAtomSSLMethodTLSv1_2);
+    ATOMS.atomSSLMethodTLSv1_3 = make_atom(env, kAtomSSLMethodTLSv1_3);
+    ATOMS.atomSSLMethodDTLSv1 = make_atom(env, kAtomSSLMethodDTLSv1);
+    ATOMS.atomSSLMethodDTLSv1_2 = make_atom(env, kAtomSSLMethodDTLSv1_2);
 
     ATOMS.atomError_enoissuercert = make_atom(env, kAtomError_enoissuercert);
     ATOMS.atomError_epeercertexpired = make_atom(env, kAtomError_epeercertexpired);
@@ -120,7 +136,8 @@ static ErlNifFunc nif_funcs[] =
     {"ssl_get_session_asn1", 1, enif_ssl_socket_get_session_ans1},
     {"ssl_session_reused", 1, enif_ssl_socket_session_reused},
     {"ssl_peercert", 1, enif_ssl_socket_peercert},
-    {"ssl_shutdown", 1, enif_ssl_socket_shutdown}
+    {"ssl_get_method", 1, enif_ssl_socket_get_method},
+    {"ssl_shutdown", 2, enif_ssl_socket_shutdown},
 };
 
 ERL_NIF_INIT(erltls_nif, nif_funcs, on_nif_load, NULL, on_nif_upgrade, on_nif_unload)

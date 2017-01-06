@@ -28,16 +28,14 @@ public:
     
     ERL_NIF_TERM Handshake(ErlNifEnv *env);
     ERL_NIF_TERM SendPending(ErlNifEnv *env);
-    
     ERL_NIF_TERM FeedData(ErlNifEnv *env, const ErlNifBinary* bin);
     ERL_NIF_TERM SendData(ErlNifEnv *env, const ErlNifBinary* bin);
+    ERL_NIF_TERM Shutdown(ErlNifEnv *env, const ErlNifBinary* bin);
 
     ERL_NIF_TERM IsSessionReused(ErlNifEnv *env);
     ERL_NIF_TERM GetSessionASN1(ErlNifEnv *env);
-
     ERL_NIF_TERM GetPeerCert(ErlNifEnv *env);
-
-    ERL_NIF_TERM Shutdown(ErlNifEnv *env);
+    ERL_NIF_TERM GetSslMethod(ErlNifEnv* env);
 
     static void SSlUserDataFree(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl, void *argp);
 
@@ -48,6 +46,7 @@ private:
     ERL_NIF_TERM SendPendingAsync(ErlNifEnv *env);
     ERL_NIF_TERM DoHandshakeOp(ErlNifEnv *env);
     ERL_NIF_TERM DoReadOp(ErlNifEnv *env);
+    ERL_NIF_TERM GetPendingData(ErlNifEnv *env, int pending);
     
     BIO* bio_read_;
     BIO* bio_write_;

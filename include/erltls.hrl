@@ -29,6 +29,7 @@
 -type ciphers()                  :: [string()].
 -type verify_type()              :: verify_none | verify_peer.
 -type compression_type()         :: compression_none.
+-type protocol()                 :: sslv3 | tlsv1 | 'tlsv1.1' | 'tlsv1.2' | dtlsv1 | 'dtlsv1.2'.
 
 %ssl stuffs
 

@@ -12,6 +12,11 @@
 
 -define(PENDING_DATA_INTERVAL, 10).
 
+-define(SSL_SHUTDOWN_UNIDIRECTIONAL, 1).
+-define(SSL_SHUTDOWN_BIDIRECTIONAL, 2).
+
+-define(RECORD_TYPE_ALERT, 21).
+
 -record(state, {
     tcp,
     tls_ref,
@@ -38,6 +43,7 @@
     encode_data/2,
     decode_data/2,
     shutdown/1,
+    downgrade/3,
     session_reused/1,
     get_session_asn1/1,
     get_pending_data/1,
@@ -87,6 +93,9 @@ get_session_asn1(Pid) ->
 
 shutdown(Pid) ->
     call(Pid, shutdown).
+
+downgrade(Pid, NewOwner, Timeout) ->
+    call(Pid, {downgrade, NewOwner, Timeout}).
 
 get_pending_data(Pid) ->
     call(Pid, get_pending_data).
@@ -215,6 +224,19 @@ handle_call(session_reused, _From, #state{tls_ref = TlsRef} = State) ->
 
 handle_call(shutdown, _From, #state{tcp = TcpSocket, tls_ref = TlsRef} = State) ->
     {reply, shutdown_ssl(TcpSocket, TlsRef), State};
+
+handle_call({downgrade, NewOwner, Timeout}, _From, #state{tcp = TcpSocket, tls_ref = TlsRef} = State) ->
+    case inet:setopts(TcpSocket, [{active, false}, {packet, 0}, {mode, binary}]) of
+        ok ->
+            case downgrade_ssl(TcpSocket, TlsRef, <<>>, Timeout) of
+                ok ->
+                    {stop, normal, inet_tcp:controlling_process(TcpSocket, NewOwner), State};
+                Error ->
+                    {reply, Error, State}
+            end;
+        Error ->
+            {reply, Error, State}
+    end;
 
 handle_call(close, _From, State) ->
     {stop, normal, ok, State};
@@ -426,15 +448,96 @@ send_pending(TcpSocket, TlsSock) ->
     end.
 
 shutdown_ssl(TcpSocket, TlsRef) ->
-    case erltls_nif:ssl_shutdown(TlsRef) of
-        {ok, _Completed} ->
+    do_shutdown_ssl(TcpSocket, TlsRef, ?SSL_SHUTDOWN_UNIDIRECTIONAL, <<>>, infinity).
+
+downgrade_ssl(TcpSocket, TlsRef, PendingData, Timeout) ->
+    do_shutdown_ssl(TcpSocket, TlsRef, ?SSL_SHUTDOWN_BIDIRECTIONAL, PendingData, Timeout).
+
+do_shutdown_ssl(TcpSocket, TlsRef, How, TlsAlertResponseData, Timeout) ->
+    case erltls_nif:ssl_shutdown(TlsRef, TlsAlertResponseData) of
+        {ok, 1} ->
             ok;
-        {ok, _Completed, PendingData} ->
-            gen_tcp:send(TcpSocket, PendingData);
+        {ok, Completed, PendingData} ->
+            case gen_tcp:send(TcpSocket, PendingData) of
+                ok ->
+                    case Completed of
+                        1 ->
+                            ok;
+                        _ ->
+                            do_shutdown_ssl_continue(TcpSocket, TlsRef, How, Timeout)
+                    end;
+                Error ->
+                    Error
+            end;
         Error ->
-            ?ERROR_MSG("shutdown unexpected error:~p", [Error]),
             Error
     end.
+
+% waits for close alert response if needed. also make sure we read only this
+% record and no other tcp traffic that might follow
+
+do_shutdown_ssl_continue(_TcpSocket, _TlsRef, ?SSL_SHUTDOWN_UNIDIRECTIONAL, _Timeout) ->
+    ok;
+do_shutdown_ssl_continue(TcpSocket, TlsRef, ?SSL_SHUTDOWN_BIDIRECTIONAL, Timeout) ->
+    case get_record_header_size(TlsRef) of
+        {ok, RecordHeaderSize, IsDtls} ->
+            case get_record_fragment_length(TcpSocket, RecordHeaderSize, IsDtls, Timeout) of
+                {ok, HeaderBytes, Type, FragmentLength} ->
+                    case Type of
+                        ?RECORD_TYPE_ALERT ->
+                            case gen_tcp:recv(TcpSocket, FragmentLength, Timeout) of
+                                {ok, FragmentBytes} ->
+                                    do_shutdown_ssl(TcpSocket, TlsRef, ?SSL_SHUTDOWN_BIDIRECTIONAL, <<HeaderBytes/binary, FragmentBytes/binary>>, Timeout);
+                                Error ->
+                                    Error
+                            end;
+                        _ ->
+                            {error, {unexpected_record, Type}}
+                    end;
+                Error ->
+                    Error
+            end;
+        Error ->
+            Error
+    end.
+
+get_record_fragment_length(TcpSocket, HeaderSize, IsDtls, Timeout) ->
+    case gen_tcp:recv(TcpSocket, HeaderSize, Timeout) of
+        {ok, HeaderBytes} ->
+            case IsDtls of
+                false ->
+                    <<Type:8/integer, _MajV:8/integer, _MinV:8/integer, FgLength:16/integer>> = HeaderBytes,
+                    {ok, HeaderBytes, Type, FgLength};
+                _ ->
+                    <<Type:8/integer, _MajV:8/integer, _MinV:8/integer, _Epoch:16/integer, _Seq:48/integer, FgLength:16/integer>> = HeaderBytes,
+                    {ok, HeaderBytes, Type, FgLength}
+            end;
+        Error ->
+            Error
+    end.
+
+% dtls header: type:uint8(21 - alert) {major:uint8 minor:uint8} epoch:uint16 sequence_number:uint48 length:uint16
+% tls header:  type:uint8(21 - alert) {major:uint8 minor:uint8} length:uint16
+
+get_record_header_size(TlsRef) ->
+    case erltls_nif:ssl_get_method(TlsRef) of
+        {ok, Method} ->
+            case is_dtls(Method) of
+                true ->
+                    {ok, 13, true};
+                _ ->
+                    {ok, 5, false}
+            end;
+        Error ->
+            Error
+    end.
+
+is_dtls(dtlsv1) ->
+    true;
+is_dtls('dtlsv1.2') ->
+    true;
+is_dtls(_) ->
+    false.
 
 stop_process(Pid) ->
     call(Pid, close).

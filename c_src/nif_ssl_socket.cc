@@ -179,15 +179,33 @@ ERL_NIF_TERM enif_ssl_socket_peercert(ErlNifEnv* env, int argc, const ERL_NIF_TE
     return wp->socket->GetPeerCert(env);
 }
 
+ERL_NIF_TERM enif_ssl_socket_get_method(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+    UNUSED(argc);
+
+    erltls_data* data = static_cast<erltls_data*>(enif_priv_data(env));
+
+    enif_ssl_socket* wp = NULL;
+
+    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, (void**) &wp))
+        return make_badarg(env);
+
+    return wp->socket->GetSslMethod(env);
+}
+
 ERL_NIF_TERM enif_ssl_socket_shutdown(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     UNUSED(argc);
     
     erltls_data* data = static_cast<erltls_data*>(enif_priv_data(env));
     enif_ssl_socket* wp = NULL;
+    ErlNifBinary bin;
     
     if(!enif_get_resource(env, argv[0], data->res_ssl_sock, (void**) &wp))
         return make_badarg(env);
     
-    return wp->socket->Shutdown(env);
+    if(!get_binary(env, argv[1], &bin))
+        return make_badarg(env);
+
+    return wp->socket->Shutdown(env, &bin);
 }

@@ -7,7 +7,7 @@
     get_inet_names/1,
     get_inet_options/1,
     get_options/1,
-    default_emulated/0,
+    emulated_for_socket/1,
     default_inet_options/0,
     emulated_list2record/1,
     emulated_list2record/2,
@@ -120,12 +120,13 @@ validate_emulated_option(header, Value) when not is_integer(Value) ->
 validate_emulated_option(_, _) ->
     ok.
 
-default_emulated() -> [
-    {packet, 0},
-    {packet_size, 0},
-    {header, 0},
-    {mode, list}
-].
+emulated_for_socket(TcpSocket) ->
+    case inet:getopts(TcpSocket, [packet, packet_size, header, mode]) of
+        {ok, Opt} ->
+            Opt;
+        Error ->
+            Error
+    end.
 
 default_inet_options() -> [
     {mode, binary},

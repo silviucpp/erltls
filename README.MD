@@ -81,7 +81,6 @@ A full handshake will be negotiated.
 - `eccs/0`
 - `connection_information/1`
 - `connection_information/2`
-- `close/2`
 
 ### SSL methods related to erltls
 
