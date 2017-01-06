@@ -31,7 +31,7 @@ class TlsSocket
 {
 public:
 
-    static const int kFlagCompressionNone = 1;
+    static const int kFlagUseCompression = 1;
     static const int kFlagUseSessionTicket = 2;
 
     enum kSslRole {kSslRoleServer = 1, kSslRoleClient};

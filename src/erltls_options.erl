@@ -64,7 +64,7 @@ get_options([H|T], TcpOpt, TlsOpt, EmulatedOpt) ->
 
     case is_tls_option(OptionKey) of
         true ->
-            %todo: validation for tls options are in nif. write tests for them
+            validate_tls_option(H),
             get_options(T, TcpOpt, [H|TlsOpt], EmulatedOpt);
         _ ->
             case is_emulated_option(OptionKey) of
@@ -110,6 +110,17 @@ is_emulated_option(packet_size) ->
     true;
 is_emulated_option(_) ->
     false.
+
+validate_tls_option({compression, Value}) ->
+    case is_boolean(Value) of
+        false ->
+            throw({error, {options, {compression, Value} }});
+        _ ->
+        ok
+    end;
+validate_tls_option(_) ->
+    % validation for the other tls options are in nif code
+    ok.
 
 validate_emulated_option(packet, Value) when not (is_atom(Value) orelse is_integer(Value)) ->
     throw({error, {options, {packet,Value}}});

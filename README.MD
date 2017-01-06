@@ -70,7 +70,7 @@ Currently supported options also available in erlang `ssl`:
 
 Options currently related to `erltls` only:
 
-- `{compression, compression_type()}` - disables support for SSL/TLS compression (`{compression, compression_none}`)
+- `{compression, boolean()}` - enable/disables support for Zlib compression (disabled by default)
 - `{use_session_ticket, boolean() | {boolean(), binary()}}` - Enables session reuse using tickets as described in [RFC5077][2]. 
 In case the key is not specified the tickets will be signed using a random key. In order to specify the key use the format `{true, <<"key_here">>}`.
 - `{reuse_sessions_ttl, integer()}` - The TTL of a session in seconds. In case the session is older than this TTL will not be possible to be reused. 

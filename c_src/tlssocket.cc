@@ -50,7 +50,7 @@ bool TlsSocket::Init(SSL_CTX* ctx, kSslRole role, long flags, const std::string&
         options |= SSL_OP_NO_TICKET;
     
 #ifdef SSL_OP_NO_COMPRESSION
-    if (flags & kFlagCompressionNone)
+    if((flags & kFlagUseCompression) == 0)
         options |= SSL_OP_NO_COMPRESSION;
 #endif
     

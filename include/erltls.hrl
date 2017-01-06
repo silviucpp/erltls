@@ -14,7 +14,7 @@
     {dhfile, path()} |
     {ciphers, ciphers()} |
     {protocol, protocol()} |
-    {compression, compression_type()} |
+    {compression, boolean()} |
     {reuse_sessions_ttl, integer()} |
     {use_session_ticket, boolean() | {boolean(), binary()}}.
 
@@ -29,7 +29,6 @@
 -type path()                     :: string().
 -type ciphers()                  :: [string()].
 -type verify_type()              :: verify_none | verify_peer.
--type compression_type()         :: compression_none.
 -type protocol()                 :: sslv3 | tlsv1 | 'tlsv1.1' | 'tlsv1.2' | dtlsv1 | 'dtlsv1.2'.
 
 %ssl stuffs

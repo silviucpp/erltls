@@ -5,8 +5,8 @@
 
 -behaviour(gen_server).
 
--define(COMPRESSION_NONE, 1).
--define(SESSION_TICKET, 2).
+-define(USE_COMPRESSION_FLAG, 1).
+-define(SESSION_TICKET_FLAG, 2).
 
 -define(SERVER, ?MODULE).
 
@@ -352,18 +352,18 @@ call(Pid, Message) ->
 
 %internal methods
 
-get_compression(compression_none) ->
-    ?COMPRESSION_NONE;
+get_compression(true) ->
+    ?USE_COMPRESSION_FLAG;
 get_compression(_) ->
     0.
 
 get_session_ticket(true) ->
-    ?SESSION_TICKET;
+    ?SESSION_TICKET_FLAG;
 get_session_ticket(_) ->
     0.
 
 get_ssl_flags(Options) ->
-    CompressionType = get_compression(erltls_utils:lookup(compression, Options)),
+    CompressionType = get_compression(erltls_utils:lookup(compression, Options, false)),
     UseSessionTicket = get_session_ticket(erltls_options:use_session_ticket(erltls_utils:lookup(use_session_ticket, Options))),
     CompressionType bor UseSessionTicket.
 

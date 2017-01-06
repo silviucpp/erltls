@@ -117,8 +117,7 @@ test_connect_complete(_Config) ->
         {sndbuf, 60000},
         {recbuf, 60000},
         {ciphers, ["AES128-GCM-SHA256"]},
-        {verify, verify_none},
-        {compression, compression_none}
+        {verify, verify_none}
     ],
 
     {ok, Socket} = erltls:connect("google.com", 443, Opt),
@@ -136,8 +135,7 @@ test_get_set_opts(_Config) ->
         {packet, 0},
         {active, 1},
         {ciphers, ["AES128-GCM-SHA256"]},
-        {verify, verify_none},
-        {compression, compression_none}
+        {verify, verify_none}
     ],
 
     {ok, Socket} = erltls:connect("status.github.com", 443, DefaultOpts),
@@ -162,8 +160,7 @@ test_handshake_failed(_Config) ->
         {sndbuf, 60000},
         {recbuf, 60000},
         {ciphers, ["DHE-RSA-AES256-SHA"]},
-        {verify, verify_none},
-        {compression, compression_none}
+        {verify, verify_none}
     ],
     {error, _} = erltls:connect("google.com", 443, Opt),
     true.
@@ -174,8 +171,7 @@ test_owner_died(_Config) ->
     Fun = fun() ->
         Opt = [
             binary,
-            {verify, verify_none},
-            {compression, compression_none}
+            {verify, verify_none}
         ],
 
         {ok, Socket} = erltls:connect("google.com", 443, Opt),
@@ -199,8 +195,7 @@ test_owner_change(_Config) ->
 
     Opt = [
         binary,
-        {verify, verify_none},
-        {compression, compression_none}
+        {verify, verify_none}
     ],
 
     {ok, Socket} = erltls:connect("google.com", 443, Opt),
@@ -234,8 +229,7 @@ test_send_recv(_Config) ->
         {sndbuf, 60000},
         {recbuf, 60000},
         {ciphers, ["AES128-GCM-SHA256"]},
-        {verify, verify_none},
-        {compression, compression_none}
+        {verify, verify_none}
     ],
 
     Request = <<"GET /api/status.json?callback=apiStatus HTTP/1.1\r\nHost: status.github.com\r\nCache-Control: no-cache\r\n\r\n">>,
@@ -262,8 +256,7 @@ test_active_mode(_Config) ->
         {packet, 0},
         {active, 1},
         {ciphers, ["AES128-GCM-SHA256"]},
-        {verify, verify_none},
-        {compression, compression_none}
+        {verify, verify_none}
     ],
 
     Request = <<"GET /api/status.json?callback=apiStatus HTTP/1.1\r\nHost: status.github.com\r\nConnection: close\r\n\r\n">>,
@@ -284,8 +277,7 @@ test_list_mode(_Config) ->
         {packet, 0},
         {active, 1},
         {ciphers, ["AES128-GCM-SHA256"]},
-        {verify, verify_none},
-        {compression, compression_none}
+        {verify, verify_none}
     ],
 
     Request = <<"GET /api/status.json?callback=apiStatus HTTP/1.1\r\nHost: status.github.com\r\nConnection: close\r\n\r\n">>,
@@ -308,8 +300,7 @@ test_server_mode(_Config) ->
         {packet, 0},
         {active, false},
         {ciphers, ["AES128-GCM-SHA256"]},
-        {verify, verify_none},
-        {compression, compression_none}
+        {verify, verify_none}
     ],
 
     {ok, LSocket} = erltls:listen(Port, [{certfile, get_certificate()} | Opt]),
@@ -346,7 +337,6 @@ test_session_reused_ticket(_Config) ->
             {reuseaddr, true},
             {ciphers, ["AES128-GCM-SHA256"]},
             {verify, verify_none},
-            {compression, compression_none},
             {use_session_ticket, {true, <<"ewjfhwejkfhjdhdjkfhdsjfch">>}},
             {reuse_sessions_ttl, 120}
         ]),
@@ -392,8 +382,7 @@ test_shutdown(_Config) ->
         {exit_on_close, false},
         {active, false},
         {ciphers, ["AES128-GCM-SHA256"]},
-        {verify, verify_none},
-        {compression, compression_none}
+        {verify, verify_none}
     ],
 
     {ok, LSocket} = erltls:listen(Port, [{certfile, get_certificate()} | Opt]),
@@ -505,8 +494,7 @@ test_dtls_mode(_Config) ->
         {active, false},
         {ciphers, ["AES128-GCM-SHA256"]},
         {verify, verify_none},
-        {protocol, 'dtlsv1.2'},
-        {compression, compression_none}
+        {protocol, 'dtlsv1.2'}
     ],
 
     {ok, LSocket} = erltls:listen(Port, [{certfile, get_certificate()} | Opt]),
