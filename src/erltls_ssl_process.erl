@@ -10,12 +10,8 @@
 
 -define(SERVER, ?MODULE).
 
--define(PENDING_DATA_INTERVAL, 10).
-
 -define(SSL_SHUTDOWN_UNIDIRECTIONAL, 1).
 -define(SSL_SHUTDOWN_BIDIRECTIONAL, 2).
-
--define(RECORD_TYPE_ALERT, 21).
 
 -record(state, {
     tcp,
@@ -26,8 +22,7 @@
     owner_monitor_ref,
     tcp_monitor_ref,
     hk_completed = false,
-    socket_ref,
-    pending_buffer = <<>>
+    socket_ref
 }).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -35,8 +30,8 @@
 -export([
     new/4,
     new/5,
-    setopts/3,
     get_options/1,
+    set_emulated_options/2,
     get_emulated_options/2,
     controlling_process/2,
     handshake/2,
@@ -46,7 +41,6 @@
     downgrade/3,
     session_reused/1,
     get_session_asn1/1,
-    get_pending_data/1,
     peercert/1,
     stop_process/1,
     protocol/1,
@@ -99,14 +93,13 @@ shutdown(Pid) ->
 downgrade(Pid, NewOwner, Timeout) ->
     call(Pid, {downgrade, NewOwner, Timeout}).
 
-get_pending_data(Pid) ->
-    call(Pid, get_pending_data).
-
 peercert(Pid) ->
     call(Pid, peercert).
 
-setopts(Pid, InetOpts, EmulatedOpts) ->
-    call(Pid, {setopts, InetOpts, EmulatedOpts}).
+set_emulated_options(_, []) ->
+    ok;
+set_emulated_options(Pid, Opts) ->
+    call(Pid, {set_emulated_options, Opts}).
 
 protocol(Pid) ->
     call(Pid, get_protocol).
@@ -136,34 +129,8 @@ handle_call({decode_data, TlsData}, _From, #state{tls_ref = TlsSock, emul_opts =
     end,
     {reply, Response, State};
 
-handle_call({setopts, InetOpts, NewEmulatedOpts}, _From, #state{tcp = TcpSock, emul_opts = EmulatedOps, pending_buffer = Pb} = State) ->
-    case set_inet_opts(TcpSock, InetOpts) of
-        ok ->
-            % in case we have pending data and socket is active we send it
-            case byte_size(Pb) > 0 of
-                true ->
-                    case erltls_utils:lookup(active, TcpSock, false) of
-                        false ->
-                            ok;
-                        _ ->
-                            erlang:send_after(?PENDING_DATA_INTERVAL, self(), send_pending_data)
-                    end;
-                _ ->
-                    ok
-            end,
-
-            case NewEmulatedOpts of
-                [] ->
-                    {reply, ok, State};
-                _ ->
-                    {reply, ok, State#state{emul_opts = erltls_options:emulated_list2record(NewEmulatedOpts, EmulatedOps)}}
-            end;
-        Error ->
-            {reply, Error, State}
-    end;
-
-handle_call(get_pending_data, _From, #state{pending_buffer = PendingBuff} = State) ->
-    {reply, PendingBuff, State#state {pending_buffer = <<>>}};
+handle_call({set_emulated_options, Opts}, _From, #state{emul_opts = EmulatedOps} = State) ->
+    {reply, ok, State#state{emul_opts = erltls_options:emulated_list2record(Opts, EmulatedOps)}};
 
 handle_call(get_options, _From, #state{emul_opts = EmulatedOpts, tls_opts = TlsOpts} = State) ->
     {reply, {ok, TlsOpts, erltls_options:emulated_record2list(EmulatedOpts)}, State};
@@ -199,21 +166,7 @@ handle_call({handshake, TcpSocket}, _From, #state{tls_ref = TlsSock} = State) ->
                     case do_handshake(TcpSocket, TlsSock) of
                         ok ->
                             change_active(TcpSocket, CurrentMode, false),
-
-                            case erltls_nif:ssl_feed_data(TlsSock, <<>>) of
-                                {ok, PendingBuff} ->
-
-                                    case PendingBuff of
-                                        <<>> ->
-                                            ok;
-                                        _ ->
-                                            erlang:send_after(?PENDING_DATA_INTERVAL, self(), send_pending_data)
-                                    end,
-
-                                    {reply, ok, State#state{hk_completed = true, pending_buffer = PendingBuff}};
-                                Error ->
-                                    Error
-                            end;
+                            {reply, ok, State#state{hk_completed = true}};
                         Error ->
                             change_active(TcpSocket, CurrentMode, false),
                             {reply, Error, State}
@@ -265,14 +218,14 @@ handle_cast(Request, State) ->
     ?ERROR_MSG("handle_cast unknown request: ~p", [Request]),
     {noreply, State}.
 
-handle_info({tcp, TcpSocket, TlsData}, #state{tcp = TcpSocket, tls_ref = TlsRef, owner_pid = Pid, socket_ref = SockRef, emul_opts = EmOpt, pending_buffer = Pb} = State) ->
+handle_info({tcp, TcpSocket, TlsData}, #state{tcp = TcpSocket, tls_ref = TlsRef, owner_pid = Pid, socket_ref = SockRef, emul_opts = EmOpt} = State) ->
     case erltls_nif:ssl_feed_data(TlsRef, TlsData) of
         {ok, RawData} ->
-            Pid ! {ssl, SockRef, convert_data(EmOpt#emulated_opts.mode, get_buffer(Pb, RawData))};
+            Pid ! {ssl, SockRef, convert_data(EmOpt#emulated_opts.mode, RawData)};
         Error ->
             Pid ! {ssl_error, SockRef, Error}
     end,
-    {noreply, State#state {pending_buffer = <<>>}};
+    {noreply, State};
 
 handle_info({tcp_closed, TcpSocket}, #state{tcp = TcpSocket, owner_pid = Pid, socket_ref = SockRef} = State) ->
     Pid ! {ssl_closed, SockRef},
@@ -285,36 +238,6 @@ handle_info({tcp_error, TcpSocket, Reason}, #state{tcp = TcpSocket, owner_pid = 
 handle_info({tcp_passive, TcpSocket}, #state{tcp = TcpSocket, owner_pid = Pid, socket_ref = SockRef} = State) ->
     Pid ! {ssl_passive, SockRef},
     {noreply, State};
-
-handle_info(send_pending_data, #state{tcp = TcpSocket, tls_ref = TlsRef, pending_buffer = PendingBuffer, owner_pid = Pid, socket_ref = SockRef, emul_opts = EmOpt} = State) ->
-    case PendingBuffer of
-        <<>> ->
-            ok;
-        _ ->
-            case inet:getopts(TcpSocket, [active]) of
-                {ok, [{active, false}]} ->
-                    ok;
-                {ok, [{active, Active}]} ->
-                    case Active of
-                        true ->
-                            ok;
-                        once ->
-                            inet:setopts(TcpSocket, [{active, false}]);
-                        N when is_integer(N) ->
-                            inet:setopts(TcpSocket, [{active, N-1}])
-                    end,
-
-                    case pop_active_message(TcpSocket, TlsRef, PendingBuffer) of
-                        {ok, SendData} ->
-                            Pid ! {ssl, SockRef, convert_data(EmOpt#emulated_opts.mode, SendData)};
-                        Error ->
-                            Pid ! {ssl_error, SockRef, Error}
-                    end;
-                Error ->
-                    ?ERROR_MSG("failed to get socket active mode: ~p", [Error])
-            end
-    end,
-    {noreply, State#state {pending_buffer = <<>>}};
 
 handle_info({'DOWN', MonitorRef, _, _, _}, State) ->
     #state{tcp = TcpSocket, tls_ref = TlsRef, owner_monitor_ref = OwnerMonitorRef, tcp_monitor_ref = TcpMonitorRef} = State,
@@ -368,7 +291,7 @@ get_ssl_flags(Options) ->
     CompressionType bor UseSessionTicket.
 
 get_ssl_process(?SSL_ROLE_SERVER, TcpSocket, TlsSock, TlsOpts, EmulatedOpts) ->
-    start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, false, <<>>);
+    start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, false);
 get_ssl_process(?SSL_ROLE_CLIENT, TcpSocket, TlsSock, TlsOpts, EmulatedOpts) ->
     case inet:getopts(TcpSocket, [active]) of
         {ok, [{active, CurrentMode}]} ->
@@ -376,13 +299,7 @@ get_ssl_process(?SSL_ROLE_CLIENT, TcpSocket, TlsSock, TlsOpts, EmulatedOpts) ->
             case do_handshake(TcpSocket, TlsSock) of
                 ok ->
                     change_active(TcpSocket, false, CurrentMode),
-
-                    case erltls_nif:ssl_feed_data(TlsSock, <<>>) of
-                        {ok, PendingBuff} ->
-                            start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, true, PendingBuff);
-                        Error ->
-                            Error
-                    end;
+                    start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, true);
                 Error ->
                     Error
             end;
@@ -390,13 +307,12 @@ get_ssl_process(?SSL_ROLE_CLIENT, TcpSocket, TlsSock, TlsOpts, EmulatedOpts) ->
             Error
     end.
 
-start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, HkCompleted, PendingBuf) ->
+start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, HkCompleted) ->
     State = #state{
         tcp = TcpSocket,
         tls_ref = TlsSock,
         owner_pid = self(),
         hk_completed = HkCompleted,
-        pending_buffer = PendingBuf,
         emul_opts = erltls_options:emulated_list2record(EmulatedOpts),
         tls_opts = TlsOpts
     },
@@ -405,13 +321,6 @@ start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, HkCompleted, PendingBuf) -
         {ok, Pid} ->
             case gen_tcp:controlling_process(TcpSocket, Pid) of
                 ok ->
-                    case PendingBuf of
-                        <<>> ->
-                            ok;
-                        _ ->
-                            erlang:send_after(?PENDING_DATA_INTERVAL, self(), send_pending_data)
-                    end,
-
                     {ok, #tlssocket{tcp_sock = TcpSocket, ssl_pid = Pid}};
                 Error ->
                     stop_process(Pid),
@@ -427,6 +336,15 @@ change_active(TcpSocket, _CurrentMode, NewMode) ->
     inet:setopts(TcpSocket, [{active, NewMode}]).
 
 do_handshake(TcpSocket, TlsSock) ->
+    case erltls_nif:ssl_get_method(TlsSock) of
+        {ok, Protocol} ->
+            RecordHeaderSize = erltls_record:get_protocol_record_header_size(Protocol),
+            do_handshake(TcpSocket, TlsSock, erltls_record:is_dtls(Protocol), RecordHeaderSize);
+        Error ->
+            Error
+    end.
+
+do_handshake(TcpSocket, TlsSock, IsDtls, RecordHeaderSize) ->
     case erltls_nif:ssl_handshake(TlsSock) of
         ok ->
             %handshake completed
@@ -434,20 +352,17 @@ do_handshake(TcpSocket, TlsSock) ->
         {error, ?SSL_ERROR_WANT_READ} ->
             case send_pending(TcpSocket, TlsSock) of
                 ok ->
-                    read_handshake(TcpSocket, TlsSock);
-                Error ->
-                    Error
-            end;
-        Error ->
-            Error
-    end.
-
-read_handshake(TcpSocket, TlsSock) ->
-    case gen_tcp:recv(TcpSocket, 0) of
-        {ok, Packet} ->
-            case erltls_nif:ssl_feed_data(TlsSock, Packet) of
-                ok ->
-                    do_handshake(TcpSocket, TlsSock);
+                    case erltls_record:read_next_record(TcpSocket, IsDtls, RecordHeaderSize) of
+                        {ok, Packet} ->
+                            case erltls_nif:ssl_feed_data(TlsSock, Packet) of
+                                ok ->
+                                    do_handshake(TcpSocket, TlsSock, IsDtls, RecordHeaderSize);
+                                Error ->
+                                    Error
+                            end;
+                        Error ->
+                            Error
+                    end;
                 Error ->
                     Error
             end;
@@ -495,12 +410,12 @@ do_shutdown_ssl(TcpSocket, TlsRef, How, TlsAlertResponseData, Timeout) ->
 do_shutdown_ssl_continue(_TcpSocket, _TlsRef, ?SSL_SHUTDOWN_UNIDIRECTIONAL, _Timeout) ->
     ok;
 do_shutdown_ssl_continue(TcpSocket, TlsRef, ?SSL_SHUTDOWN_BIDIRECTIONAL, Timeout) ->
-    case get_record_header_size(TlsRef) of
+    case erltls_record:get_record_header_size(TlsRef) of
         {ok, RecordHeaderSize, IsDtls} ->
-            case get_record_fragment_length(TcpSocket, RecordHeaderSize, IsDtls, Timeout) of
+            case erltls_record:get_record_fragment_length(TcpSocket, RecordHeaderSize, IsDtls, Timeout) of
                 {ok, HeaderBytes, Type, FragmentLength} ->
                     case Type of
-                        ?RECORD_TYPE_ALERT ->
+                        ?SSL_RECORD_ALERT ->
                             case gen_tcp:recv(TcpSocket, FragmentLength, Timeout) of
                                 {ok, FragmentBytes} ->
                                     do_shutdown_ssl(TcpSocket, TlsRef, ?SSL_SHUTDOWN_BIDIRECTIONAL, <<HeaderBytes/binary, FragmentBytes/binary>>, Timeout);
@@ -517,44 +432,6 @@ do_shutdown_ssl_continue(TcpSocket, TlsRef, ?SSL_SHUTDOWN_BIDIRECTIONAL, Timeout
             Error
     end.
 
-get_record_fragment_length(TcpSocket, HeaderSize, IsDtls, Timeout) ->
-    case gen_tcp:recv(TcpSocket, HeaderSize, Timeout) of
-        {ok, HeaderBytes} ->
-            case IsDtls of
-                false ->
-                    <<Type:8/integer, _MajV:8/integer, _MinV:8/integer, FgLength:16/integer>> = HeaderBytes,
-                    {ok, HeaderBytes, Type, FgLength};
-                _ ->
-                    <<Type:8/integer, _MajV:8/integer, _MinV:8/integer, _Epoch:16/integer, _Seq:48/integer, FgLength:16/integer>> = HeaderBytes,
-                    {ok, HeaderBytes, Type, FgLength}
-            end;
-        Error ->
-            Error
-    end.
-
-% dtls header: type:uint8(21 - alert) {major:uint8 minor:uint8} epoch:uint16 sequence_number:uint48 length:uint16
-% tls header:  type:uint8(21 - alert) {major:uint8 minor:uint8} length:uint16
-
-get_record_header_size(TlsRef) ->
-    case erltls_nif:ssl_get_method(TlsRef) of
-        {ok, Method} ->
-            case is_dtls(Method) of
-                true ->
-                    {ok, 13, true};
-                _ ->
-                    {ok, 5, false}
-            end;
-        Error ->
-            Error
-    end.
-
-is_dtls(dtlsv1) ->
-    true;
-is_dtls('dtlsv1.2') ->
-    true;
-is_dtls(_) ->
-    false.
-
 stop_process(Pid) ->
     call(Pid, close).
 
@@ -563,30 +440,7 @@ mandatory_cert(?SSL_ROLE_SERVER) ->
 mandatory_cert(?SSL_ROLE_CLIENT) ->
     false.
 
-get_buffer(<<>>, NewData) ->
-    NewData;
-get_buffer(Buffer, NewData) ->
-    <<Buffer/binary, NewData/binary>>.
-
 convert_data(binary, Data) ->
     Data;
 convert_data(list, Data) ->
     binary_to_list(Data).
-
-set_inet_opts(_TcpSock, []) ->
-    ok;
-set_inet_opts(TcpSock, Options) ->
-    inet:setopts(TcpSock, Options).
-
-pop_active_message(TcpSocket, TlsRef, Buffer) ->
-    receive
-        {tcp, TcpSocket, TlsData} ->
-            case erltls_nif:ssl_feed_data(TlsRef, TlsData) of
-                {ok, NewData} ->
-                    {ok, <<Buffer/binary, NewData/binary>>};
-                Error ->
-                    Error
-            end
-        after 0 ->
-            {ok, Buffer}
-    end.

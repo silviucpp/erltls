@@ -39,6 +39,11 @@
 -define(SSL_ERROR_WANT_READ, 2).
 -define(SSL_ERROR_WANT_WRITE, 3).
 
+-define(SSL_RECORD_CHANGE_CIPHER_SPEC, 20).
+-define(SSL_RECORD_ALERT, 21).
+-define(SSL_RECORD_HANDSHAKE, 22).
+-define(SSL_RECORD_APP_DATA, 23).
+
 %logs
 
 -define(PRINT_MSG(Format, Args),
