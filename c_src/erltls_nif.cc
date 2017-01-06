@@ -129,6 +129,7 @@ static ErlNifFunc nif_funcs[] =
     {"new_context", 1, enif_ssl_new_context},
     {"ciphers", 1, enif_ciphers},
     {"ssl_new", 4, enif_ssl_socket_new},
+    {"ssl_set_owner", 2, enif_ssl_socket_set_owner},
     {"ssl_handshake", 1, enif_ssl_socket_handshake},
     {"ssl_send_pending", 1, enif_ssl_socket_send_pending},
     {"ssl_feed_data", 2, enif_ssl_socket_feed_data},

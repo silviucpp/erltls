@@ -108,10 +108,12 @@ setopts(Pid, InetOpts, EmulatedOpts) ->
 
 %internals for gen_server
 
-init(#state{tcp = TcpSocket} = State) ->
+init(#state{tcp = TcpSocket, tls_ref = TlsRef} = State) ->
+    Self = self(),
+    ok = erltls_nif:ssl_set_owner(TlsRef, Self),
     TcpMonitorRef = erlang:monitor(port, TcpSocket),
     OwnerMonitorRef = erlang:monitor(process, State#state.owner_pid),
-    SocketRef = #tlssocket{tcp_sock = TcpSocket, ssl_pid = self()},
+    SocketRef = #tlssocket{tcp_sock = TcpSocket, ssl_pid = Self},
     {ok, State#state{owner_monitor_ref = OwnerMonitorRef, tcp_monitor_ref = TcpMonitorRef, socket_ref = SocketRef}}.
 
 handle_call({encode_data, Data}, _From, #state{tls_ref = TlsSock} = State) ->

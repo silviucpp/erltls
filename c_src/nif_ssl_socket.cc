@@ -63,6 +63,25 @@ ERL_NIF_TERM enif_ssl_socket_new(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
     return enif_make_tuple2(env, ATOMS.atomOk, term);
 }
 
+ERL_NIF_TERM enif_ssl_socket_set_owner(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+    UNUSED(argc);
+
+    erltls_data* data = static_cast<erltls_data*>(enif_priv_data(env));
+
+    enif_ssl_socket* wp = NULL;
+    ErlNifPid pid;
+
+    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, (void**) &wp))
+        return make_badarg(env);
+
+    if(!enif_get_local_pid(env, argv[1], &pid))
+        return make_badarg(env);
+
+    wp->socket->SetOwnerProcess(SocketOwner(pid));
+    return ATOMS.atomOk;
+}
+
 void enif_ssl_socket_free(ErlNifEnv* env, void* obj)
 {
     UNUSED(env);

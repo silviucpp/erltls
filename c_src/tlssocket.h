@@ -12,6 +12,21 @@ struct ssl_user_data
     ERL_NIF_TERM peer_verify_result;
 };
 
+class SocketOwner
+{
+public:
+
+    SocketOwner() : is_set_(false) {}
+    SocketOwner(const ErlNifPid& p) : is_set_(true), pid_(p) {}
+
+    bool is_set() const { return is_set_;}
+    const ErlNifPid& pid() const { return pid_;}
+
+private:
+    bool is_set_;
+    ErlNifPid pid_;
+};
+
 class TlsSocket
 {
 public:
@@ -25,6 +40,7 @@ public:
     ~TlsSocket();
     
     bool Init(SSL_CTX* context, kSslRole role, long flags, const std::string& session_cache);
+    void SetOwnerProcess(const SocketOwner& owner) {owner_ = owner;}
     
     ERL_NIF_TERM Handshake(ErlNifEnv *env);
     ERL_NIF_TERM SendPending(ErlNifEnv *env);
@@ -48,6 +64,7 @@ private:
     ERL_NIF_TERM DoReadOp(ErlNifEnv *env);
     ERL_NIF_TERM GetPendingData(ErlNifEnv *env, int pending);
     
+    SocketOwner owner_;
     BIO* bio_read_;
     BIO* bio_write_;
     SSL* ssl_;

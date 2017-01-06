@@ -9,6 +9,7 @@
     new_context/1,
     ciphers/1,
     ssl_new/4,
+    ssl_set_owner/2,
     ssl_handshake/1,
     ssl_send_pending/1,
     ssl_feed_data/2,
@@ -50,6 +51,9 @@ ciphers(_Ctx) ->
     ?NOT_LOADED.
 
 ssl_new(_Context, _Role, _Flags, _CachedSession) ->
+    ?NOT_LOADED.
+
+ssl_set_owner(_SocketRef, _Pid) ->
     ?NOT_LOADED.
 
 ssl_handshake(_SocketRef) ->
