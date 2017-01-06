@@ -29,12 +29,12 @@
 
 -export([
     new/4,
-    new/5,
+    new/6,
     get_options/1,
     set_emulated_options/2,
     get_emulated_options/2,
     controlling_process/2,
-    handshake/2,
+    handshake/3,
     encode_data/2,
     decode_data/2,
     shutdown/1,
@@ -48,14 +48,14 @@
 ]).
 
 new(TcpSocket, TlsOptions, EmulatedOpts, Role) ->
-    new(TcpSocket, TlsOptions, EmulatedOpts, Role, <<>>).
+    new(TcpSocket, TlsOptions, EmulatedOpts, Role, <<>>, infinity).
 
-new(TcpSocket, TlsOptions, EmulatedOpts, Role, CachedSession) ->
+new(TcpSocket, TlsOptions, EmulatedOpts, Role, CachedSession, Timeout) ->
     case erltls_manager:get_context(TlsOptions, mandatory_cert(Role)) of
         {ok, Context} ->
             case erltls_nif:ssl_new(Context, Role, get_ssl_flags(TlsOptions), CachedSession) of
                 {ok, TlsSock} ->
-                    get_ssl_process(Role, TcpSocket, TlsSock, TlsOptions, EmulatedOpts);
+                    get_ssl_process(Role, TcpSocket, TlsSock, TlsOptions, EmulatedOpts, Timeout);
                 Error ->
                     Error
             end;
@@ -72,8 +72,8 @@ get_emulated_options(Pid, OptionNames) ->
 controlling_process(Pid, NewOwner) ->
     call(Pid, {controlling_process, self(), NewOwner}).
 
-handshake(Pid, TcpSocket) ->
-    call(Pid, {handshake, TcpSocket}).
+handshake(Pid, TcpSocket, Timeout) ->
+    call(Pid, {handshake, TcpSocket, Timeout}).
 
 encode_data(Pid, Data) ->
     call(Pid, {encode_data, Data}).
@@ -155,7 +155,7 @@ handle_call({controlling_process, SenderPid, NewOwner}, _From, State) ->
             {reply, {error, not_owner}, State}
     end;
 
-handle_call({handshake, TcpSocket}, _From, #state{tls_ref = TlsSock} = State) ->
+handle_call({handshake, TcpSocket, Timeout}, _From, #state{tls_ref = TlsSock} = State) ->
     case State#state.hk_completed of
         true ->
             {reply, {error, <<"handshake already completed">>}, State};
@@ -163,7 +163,7 @@ handle_call({handshake, TcpSocket}, _From, #state{tls_ref = TlsSock} = State) ->
             case inet:getopts(TcpSocket, [active]) of
                 {ok, [{active, CurrentMode}]} ->
                     change_active(TcpSocket, CurrentMode, false),
-                    case do_handshake(TcpSocket, TlsSock) of
+                    case do_handshake(TcpSocket, TlsSock, Timeout) of
                         ok ->
                             change_active(TcpSocket, CurrentMode, false),
                             {reply, ok, State#state{hk_completed = true}};
@@ -290,13 +290,13 @@ get_ssl_flags(Options) ->
     UseSessionTicket = get_session_ticket(erltls_options:use_session_ticket(erltls_utils:lookup(use_session_ticket, Options))),
     CompressionType bor UseSessionTicket.
 
-get_ssl_process(?SSL_ROLE_SERVER, TcpSocket, TlsSock, TlsOpts, EmulatedOpts) ->
+get_ssl_process(?SSL_ROLE_SERVER, TcpSocket, TlsSock, TlsOpts, EmulatedOpts, _Timeout) ->
     start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, false);
-get_ssl_process(?SSL_ROLE_CLIENT, TcpSocket, TlsSock, TlsOpts, EmulatedOpts) ->
+get_ssl_process(?SSL_ROLE_CLIENT, TcpSocket, TlsSock, TlsOpts, EmulatedOpts, Timeout) ->
     case inet:getopts(TcpSocket, [active]) of
         {ok, [{active, CurrentMode}]} ->
             change_active(TcpSocket, CurrentMode, false),
-            case do_handshake(TcpSocket, TlsSock) of
+            case do_handshake(TcpSocket, TlsSock, Timeout) of
                 ok ->
                     change_active(TcpSocket, false, CurrentMode),
                     start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, true);
@@ -335,16 +335,16 @@ change_active(_TcpSocket, CurrentMode, NewMode) when CurrentMode =:= NewMode ->
 change_active(TcpSocket, _CurrentMode, NewMode) ->
     inet:setopts(TcpSocket, [{active, NewMode}]).
 
-do_handshake(TcpSocket, TlsSock) ->
+do_handshake(TcpSocket, TlsSock, Timeout) ->
     case erltls_nif:ssl_get_method(TlsSock) of
         {ok, Protocol} ->
             RecordHeaderSize = erltls_record:get_protocol_record_header_size(Protocol),
-            do_handshake(TcpSocket, TlsSock, erltls_record:is_dtls(Protocol), RecordHeaderSize);
+            do_handshake(TcpSocket, TlsSock, erltls_record:is_dtls(Protocol), RecordHeaderSize, Timeout);
         Error ->
             Error
     end.
 
-do_handshake(TcpSocket, TlsSock, IsDtls, RecordHeaderSize) ->
+do_handshake(TcpSocket, TlsSock, IsDtls, RecordHeaderSize, Timeout) ->
     case erltls_nif:ssl_handshake(TlsSock) of
         ok ->
             %handshake completed
@@ -352,11 +352,11 @@ do_handshake(TcpSocket, TlsSock, IsDtls, RecordHeaderSize) ->
         {error, ?SSL_ERROR_WANT_READ} ->
             case send_pending(TcpSocket, TlsSock) of
                 ok ->
-                    case erltls_record:read_next_record(TcpSocket, IsDtls, RecordHeaderSize) of
-                        {ok, Packet} ->
+                    case erltls_record:read_next_record(TcpSocket, IsDtls, RecordHeaderSize, Timeout) of
+                        {ok, _Type, Packet} ->
                             case erltls_nif:ssl_feed_data(TlsSock, Packet) of
                                 ok ->
-                                    do_handshake(TcpSocket, TlsSock, IsDtls, RecordHeaderSize);
+                                    do_handshake(TcpSocket, TlsSock, IsDtls, RecordHeaderSize, Timeout);
                                 Error ->
                                     Error
                             end;
@@ -410,18 +410,15 @@ do_shutdown_ssl(TcpSocket, TlsRef, How, TlsAlertResponseData, Timeout) ->
 do_shutdown_ssl_continue(_TcpSocket, _TlsRef, ?SSL_SHUTDOWN_UNIDIRECTIONAL, _Timeout) ->
     ok;
 do_shutdown_ssl_continue(TcpSocket, TlsRef, ?SSL_SHUTDOWN_BIDIRECTIONAL, Timeout) ->
-    case erltls_record:get_record_header_size(TlsRef) of
-        {ok, RecordHeaderSize, IsDtls} ->
-            case erltls_record:get_record_fragment_length(TcpSocket, RecordHeaderSize, IsDtls, Timeout) of
-                {ok, HeaderBytes, Type, FragmentLength} ->
+    case erltls_nif:ssl_get_method(TlsRef) of
+        {ok, Protocol} ->
+            RecordHeaderSize = erltls_record:get_protocol_record_header_size(Protocol),
+            IsDtls = erltls_record:is_dtls(Protocol),
+            case erltls_record:read_next_record(TcpSocket, IsDtls, RecordHeaderSize, Timeout) of
+                {ok, Type, Packet} ->
                     case Type of
                         ?SSL_RECORD_ALERT ->
-                            case gen_tcp:recv(TcpSocket, FragmentLength, Timeout) of
-                                {ok, FragmentBytes} ->
-                                    do_shutdown_ssl(TcpSocket, TlsRef, ?SSL_SHUTDOWN_BIDIRECTIONAL, <<HeaderBytes/binary, FragmentBytes/binary>>, Timeout);
-                                Error ->
-                                    Error
-                            end;
+                            do_shutdown_ssl(TcpSocket, TlsRef, ?SSL_SHUTDOWN_BIDIRECTIONAL, Packet, Timeout);
                         _ ->
                             {error, {unexpected_record, Type}}
                     end;

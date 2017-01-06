@@ -3,50 +3,27 @@
 
 -export([
     get_protocol_record_header_size/1,
-    read_next_record/3,
-    get_record_fragment_length/4,
-    get_record_header_size/1,
+    read_next_record/4,
     is_dtls/1
 ]).
 
 -define(RC_HEADER_SIZE_TLS, 5).
 -define(RC_HEADER_SIZE_DTLS, 13).
 
-read_next_record(TcpSocket, IsDtls, RecordHeaderSize) ->
-    case gen_tcp:recv(TcpSocket, RecordHeaderSize) of
+read_next_record(TcpSocket, IsDtls, RecordHeaderSize, Timeout) ->
+    case gen_tcp:recv(TcpSocket, RecordHeaderSize, Timeout) of
         {ok, RecordHeaderPacket} ->
             case get_record_header_info(IsDtls, RecordHeaderPacket) of
-                {ok, _Type, FgLength} ->
-                    case gen_tcp:recv(TcpSocket, FgLength) of
+                {ok, Type, FgLength} ->
+                    case gen_tcp:recv(TcpSocket, FgLength, Timeout) of
                         {ok, PacketFragment} ->
-                            {ok, <<RecordHeaderPacket/binary, PacketFragment/binary>>};
+                            {ok, Type,  <<RecordHeaderPacket/binary, PacketFragment/binary>>};
                         Error ->
                             Error
                     end;
                 Error ->
                     Error
             end;
-        Error ->
-            Error
-    end.
-
-get_record_fragment_length(TcpSocket, HeaderSize, IsDtls, Timeout) ->
-    case gen_tcp:recv(TcpSocket, HeaderSize, Timeout) of
-        {ok, HeaderBytes} ->
-            case get_record_header_info(IsDtls, HeaderBytes) of
-                {ok, Type, FgLength} ->
-                    {ok, HeaderBytes, Type, FgLength};
-                Error ->
-                    Error
-            end;
-        Error ->
-            Error
-    end.
-
-get_record_header_size(TlsRef) ->
-    case erltls_nif:ssl_get_method(TlsRef) of
-        {ok, Method} ->
-            {ok, get_protocol_record_header_size(Method), is_dtls(Method)};
         Error ->
             Error
     end.
