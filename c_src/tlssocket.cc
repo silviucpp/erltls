@@ -288,8 +288,6 @@ ERL_NIF_TERM TlsSocket::GetSslMethod(ErlNifEnv* env)
     if(!ssl_)
         return make_error(env, ATOMS.atomSslNotStarted);
 
-    //from ssl/ssl_lib.c
-
     std::string version = SSL_get_version(ssl_);
     ERL_NIF_TERM term;
 
@@ -326,6 +324,8 @@ ERL_NIF_TERM TlsSocket::GetSessionInfo(ErlNifEnv* env)
 
 bool TlsSocket::ProtocolToAtom(const std::string& protocol, ERL_NIF_TERM* term)
 {
+    //from ssl/ssl_lib.c
+
     if(protocol == "TLSv1.3")
     {
         *term = ATOMS.atomSSLMethodTLSv1_3;

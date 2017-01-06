@@ -30,19 +30,19 @@
 -export([
     new/4,
     new/6,
-    get_options/1,
-    set_emulated_options/2,
-    get_emulated_options/2,
-    controlling_process/2,
     handshake/3,
     encode_data/2,
     decode_data/2,
     shutdown/1,
     downgrade/3,
+    close/1,
+    get_options/1,
+    set_emulated_options/2,
+    get_emulated_options/2,
+    controlling_process/2,
     session_reused/1,
     get_session_asn1/1,
     peercert/1,
-    stop_process/1,
     protocol/1,
     session_info/1
 ]).
@@ -323,7 +323,7 @@ start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, HkCompleted) ->
                 ok ->
                     {ok, #tlssocket{tcp_sock = TcpSocket, ssl_pid = Pid}};
                 Error ->
-                    stop_process(Pid),
+                    close(Pid),
                     Error
             end;
         Error ->
@@ -429,7 +429,7 @@ do_shutdown_ssl_continue(TcpSocket, TlsRef, ?SSL_SHUTDOWN_BIDIRECTIONAL, Timeout
             Error
     end.
 
-stop_process(Pid) ->
+close(Pid) ->
     call(Pid, close).
 
 mandatory_cert(?SSL_ROLE_SERVER) ->

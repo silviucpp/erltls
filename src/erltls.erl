@@ -330,7 +330,7 @@ close(TlsSocket, _Timeout) ->
 
 close(#tlssocket{ssl_pid = Pid, tcp_sock = TcpSocket}) ->
     erltls_ssl_process:shutdown(Pid),
-    erltls_ssl_process:stop_process(Pid),
+    erltls_ssl_process:close(Pid),
     gen_tcp:close(TcpSocket).
 
 -spec shutdown(tlssocket(), read | write | read_write) ->  ok | {error, reason()}.
