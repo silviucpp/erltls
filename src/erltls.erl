@@ -124,9 +124,20 @@ connect(Host, Port, Options, Timeout) ->
 -spec controlling_process(tlssocket(), pid()) ->
     ok | {error, reason()}.
 
-controlling_process(#tlssocket{ssl_pid = Pid}, NewOwner) ->
-    %todo: implement also message transfer
-    erltls_ssl_process:controlling_process(Pid, NewOwner).
+controlling_process(#tlssocket{ssl_pid = Pid} = Socket, NewOwner) ->
+    case erltls_ssl_process:controlling_process(Pid, NewOwner) of
+        ok ->
+            receive
+                {erltls_message_transfer, Socket} ->
+                    transfer_messages(Socket, NewOwner),
+                    Pid ! {erltls_transfer_completed, Socket},
+                    ok
+                after 10000 ->
+                    {error, timeout}
+            end;
+        Error ->
+            Error
+    end.
 
 -spec getopts(tlssocket(), [gen_tcp:option_name()]) ->
     {ok, [gen_tcp:option()]} | {error, reason()}.
@@ -400,3 +411,21 @@ update_session_ticket(true, Host, Port, TlsRef) ->
     end;
 update_session_ticket(_, _Host, _Port, _TlsRef) ->
     true.
+
+transfer_messages(Sock, NewOwner) ->
+    receive
+        {ssl, Sock, Data} ->
+            NewOwner ! {ssl, Sock, Data},
+            transfer_messages(Sock, NewOwner);
+        {ssl_closed, Sock} ->
+            NewOwner ! {ssl_closed, Sock},
+            transfer_messages(Sock, NewOwner);
+        {ssl_error, Sock, Reason} ->
+            NewOwner ! {ssl_error, Sock, Reason},
+            transfer_messages(Sock, NewOwner);
+        {ssl_passive, Sock} ->
+            NewOwner ! {ssl_passive, Sock},
+            transfer_messages(Sock, NewOwner)
+    after 0 ->
+        ok
+    end.

@@ -138,7 +138,7 @@ handle_call(get_options, _From, #state{emul_opts = EmulatedOpts, tls_opts = TlsO
 handle_call({get_emulated_options, OptionNames}, _From, #state{emul_opts = EmulatedOpts} = State) ->
     {reply, {ok, erltls_options:emulated_by_names(OptionNames, EmulatedOpts)}, State};
 
-handle_call({controlling_process, SenderPid, NewOwner}, _From, State) ->
+handle_call({controlling_process, SenderPid, NewOwner}, From, #state{socket_ref = SocketRef} = State) ->
     #state{owner_pid = OwnerPid, owner_monitor_ref = OwnerMonitRef} = State,
 
     case SenderPid =:= OwnerPid of
@@ -150,7 +150,17 @@ handle_call({controlling_process, SenderPid, NewOwner}, _From, State) ->
                     erlang:demonitor(OwnerMonitRef)
             end,
             NewOwnerRef = erlang:monitor(process, NewOwner),
-            {reply, ok, State#state {owner_pid = NewOwner, owner_monitor_ref = NewOwnerRef}};
+
+            gen_server:reply(From, ok),
+            SenderPid ! {erltls_message_transfer, SocketRef},
+            receive
+                {erltls_transfer_completed, SocketRef} ->
+                    ok
+                after 10000 ->
+                    ok
+            end,
+
+            {noreply, State#state {owner_pid = NewOwner, owner_monitor_ref = NewOwnerRef}};
         _ ->
             {reply, {error, not_owner}, State}
     end;

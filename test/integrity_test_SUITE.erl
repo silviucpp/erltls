@@ -195,21 +195,28 @@ test_owner_change(_Config) ->
 
     Opt = [
         binary,
-        {verify, verify_none}
+        {verify, verify_none},
+        {active, true}
     ],
 
-    {ok, Socket} = erltls:connect("google.com", 443, Opt),
+    Request = <<"GET /api/status.json?callback=apiStatus HTTP/1.1\r\nHost: status.github.com\r\nConnection: close\r\n\r\n">>,
+    {ok, Socket} = erltls:connect("status.github.com", 443, Opt),
+    ok = erltls:send(Socket, Request),
 
     Fun = fun() ->
         receive
-            {owner_set, Sock} ->
+            {ssl, Sock, _Data} ->
                 true = is_process_alive(Sock#tlssocket.ssl_pid)
         end
     end,
 
+    receive
+        {ssl, Socket, Data} ->
+            self() ! Socket, Data
+    end,
+
     Pid = spawn_link(Fun),
     ok = erltls:controlling_process(Socket, Pid),
-    Pid ! {owner_set, Socket},
 
     receive
         {'EXIT',Pid, _} ->
