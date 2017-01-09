@@ -1,6 +1,6 @@
 # erltls
 
-*TLS/SSL OpenSSL-based NIF library for Erlang using the same interface as erlang `ssl` module.*
+*TLS/SSL/DTLS OpenSSL/BoringSSL-based NIF library for Erlang using the same interface as erlang `ssl` module.*
       
 This module contains interface functions for the SSL/TLS protocol. 
 At this moment not all methods available in [`ssl`][1] module are implemented and also not all `ssl_option` are supported.
