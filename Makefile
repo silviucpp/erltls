@@ -1,5 +1,18 @@
 REBAR=rebar
 
+get_deps:
+	@./build_deps.sh
+
+ifeq ($(USE_BORINGSSL), 1)
+compile_nif: get_deps
+endif
+
+compile_nif:
+	@make V=0 -C c_src -j 8
+
+clean_nif:
+	@make -C c_src clean
+
 compile:
 	${REBAR} compile
 
