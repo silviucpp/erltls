@@ -270,3 +270,14 @@ int TlsManager::GetSSLVerifyFlags(int verify, bool fail_if_no_peer_cert)
 
     return flags;
 }
+
+ERL_NIF_TERM TlsManager::GetOpenSSLVersion(ErlNifEnv* env)
+{
+    std::string ssl_compile_version = OPENSSL_VERSION_TEXT;
+    std::string ssl_lib_version = SSLeay_version(SSLEAY_VERSION);
+
+    ERL_NIF_TERM comp_version_item = enif_make_tuple(env, 2, ATOMS.atomCompileVersion, make_binary(env, ssl_compile_version));
+    ERL_NIF_TERM lib_version_item = enif_make_tuple(env, 2, ATOMS.atomLibVersion, make_binary(env, ssl_lib_version));
+
+    return make_ok_result(env, enif_make_list(env, 2, comp_version_item, lib_version_item));
+}

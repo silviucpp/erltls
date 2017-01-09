@@ -37,7 +37,8 @@
     recv/3,
     close/1,
     close/2,
-    shutdown/2
+    shutdown/2,
+    versions/0
 ]).
 
 -spec start() -> ok  | {error, reason()}.
@@ -354,6 +355,11 @@ shutdown(#tlssocket{tcp_sock = TcpSocket, ssl_pid = Pid}, How)->
             ok
     end,
     gen_tcp:shutdown(TcpSocket, How).
+
+-spec versions() -> {ok, list()}.
+
+versions() ->
+    erltls_nif:version().
 
 %internals
 

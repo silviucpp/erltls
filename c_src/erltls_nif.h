@@ -47,6 +47,10 @@ struct atoms
     ERL_NIF_TERM atomCtxVerify;
     ERL_NIF_TERM atomCtxFailIfNoPeerCert;
     ERL_NIF_TERM atomCtxDepth;
+
+    ERL_NIF_TERM atomCompileVersion;
+    ERL_NIF_TERM atomLibVersion;
+
 };
 
 struct erltls_data

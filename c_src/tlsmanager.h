@@ -4,6 +4,7 @@
 #include <openssl/ssl.h>
 #include <string>
 #include "macros.h"
+#include "erl_nif.h"
 
 #define DEFAULT_VERIFY_DEPTH 1
 #define VERIFY_NONE 0
@@ -45,6 +46,8 @@ public:
     static void InitOpenSSL();
     static void CleanupOpenSSL();
     static int GetSslUserDataIndex();
+
+    static ERL_NIF_TERM GetOpenSSLVersion(ErlNifEnv* env);
 
     static SSL_CTX* CreateContext(const ContextProperties& props);
     static int VerifyCallback(int preverify_ok, X509_STORE_CTX* ctx);

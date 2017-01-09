@@ -189,6 +189,13 @@ ERL_NIF_TERM enif_ciphers(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     return enif_make_list_from_array(env, nif_items, static_cast<unsigned>(ciphers_count));
 }
 
+ERL_NIF_TERM enif_openssl_version(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+    UNUSED(argc);
+    UNUSED(argv);
+    return TlsManager::GetOpenSSLVersion(env);
+}
+
 void enif_ssl_ctx_free(ErlNifEnv* env, void* obj)
 {
     UNUSED(env);

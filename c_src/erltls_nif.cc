@@ -47,6 +47,9 @@ const char kAtomCtxVerify[] = "verify";
 const char kAtomCtxFailIfNoPeerCert[] = "fail_if_no_peer_cert";
 const char kAtomCtxDepth[] = "depth";
 
+const char kAtomCompileVersion[] = "compile_version";
+const char kAtomLibVersion[] = "lib_version";
+
 atoms ATOMS;
 
 void open_resources(ErlNifEnv* env, erltls_data* data)
@@ -104,6 +107,9 @@ int on_nif_load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     ATOMS.atomCtxVerify = make_atom(env, kAtomCtxVerify);
     ATOMS.atomCtxFailIfNoPeerCert = make_atom(env, kAtomCtxFailIfNoPeerCert);
     ATOMS.atomCtxDepth = make_atom(env, kAtomCtxDepth);
+    
+    ATOMS.atomCompileVersion = make_atom(env, kAtomCompileVersion);
+    ATOMS.atomLibVersion = make_atom(env, kAtomLibVersion);
 
     erltls_data* data = static_cast<erltls_data*>(enif_alloc(sizeof(erltls_data)));
     open_resources(env, data);
@@ -148,6 +154,7 @@ static ErlNifFunc nif_funcs[] =
     {"ssl_get_method", 1, enif_ssl_socket_get_method},
     {"ssl_get_session_info", 1, enif_ssl_socket_get_session_info},
     {"ssl_shutdown", 2, enif_ssl_socket_shutdown},
+    {"version", 0, enif_openssl_version},
 };
 
 ERL_NIF_INIT(erltls_nif, nif_funcs, on_nif_load, NULL, on_nif_upgrade, on_nif_unload)
