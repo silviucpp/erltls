@@ -24,7 +24,7 @@ struct ContextProperties
     std::string cert_file;
     std::string ciphers;
     std::string dh_file;
-    std::string ca_file;
+    std::string ca_cert_file;
 
     uint32_t reuse_sessions_ttl_sec;
     bool use_session_ticket;

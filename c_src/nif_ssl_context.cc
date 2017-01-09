@@ -33,9 +33,9 @@ ERL_NIF_TERM parse_context_props(ErlNifEnv* env, ERL_NIF_TERM list, ContextPrope
             if(!get_string(env, value, &props->cert_file))
                 return make_bad_options(env, head);
         }
-        else if(enif_is_identical(key, ATOMS.atomCtxCacerts))
+        else if(enif_is_identical(key, ATOMS.atomCtxCaCertFile))
         {
-            if(!get_string(env, value, &props->ca_file))
+            if(!get_string(env, value, &props->ca_cert_file))
                 return make_bad_options(env, head);
         }
         else if(enif_is_identical(key, ATOMS.atomCtxCiphers))

@@ -37,7 +37,7 @@ const char kAtomSslCipherSuite[] = "cipher_suite";
 const char kAtomCtxTlsProtocol[] = "protocol";
 const char kAtomCtxCertfile[] = "certfile";
 const char kAtomCtxDhfile[] = "dhfile";
-const char kAtomCtxCacerts[] = "cacerts";
+const char kAtomCtxCaCertFile[] = "cacertfile";
 const char kAtomCtxCiphers[] = "ciphers";
 const char kAtomCtxReuseSessionsTtl[] = "reuse_sessions_ttl";
 const char kAtomCtxUseSessionTicket[] = "use_session_ticket";
@@ -92,7 +92,7 @@ int on_nif_load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     ATOMS.atomCtxTlsProtocol = make_atom(env, kAtomCtxTlsProtocol);
     ATOMS.atomCtxCertfile = make_atom(env, kAtomCtxCertfile);
     ATOMS.atomCtxDhfile = make_atom(env, kAtomCtxDhfile);
-    ATOMS.atomCtxCacerts = make_atom(env, kAtomCtxCacerts);
+    ATOMS.atomCtxCaCertFile = make_atom(env, kAtomCtxCaCertFile);
     ATOMS.atomCtxCiphers = make_atom(env, kAtomCtxCiphers);
     ATOMS.atomCtxReuseSessionsTtl = make_atom(env, kAtomCtxReuseSessionsTtl);
     ATOMS.atomCtxUseSessionTicket = make_atom(env, kAtomCtxUseSessionTicket);

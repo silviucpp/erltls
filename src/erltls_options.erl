@@ -89,12 +89,12 @@ get_option_key(El) when is_tuple(El) ->
 is_tls_option(Key) ->
     lists:member(Key, [
         %options available in both ssl and erltls
-        certfile, dhfile, cacerts, ciphers, verify, depth, fail_if_no_peer_cert,
+        certfile, cacertfile, dhfile, ciphers, verify, depth, fail_if_no_peer_cert,
         %options available only in erltls
         compression, use_session_ticket, reuse_sessions_ttl, protocol,
         % todo: implement the following options:
         verify_fun, cert, key, keyfile, password,
-        cacertfile, dh, user_lookup_fun, psk_identity, srp_identity, ssl_imp,
+        cacerts, dh, user_lookup_fun, psk_identity, srp_identity, ssl_imp,
         hibernate_after, reuse_sessions, reuse_session, alpn_advertised_protocols,
         alpn_preferred_protocols, next_protocols_advertised, client_preferred_next_protocols,
         log_alert, server_name_indication, sni_hosts, sni_fun

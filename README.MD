@@ -63,8 +63,8 @@ Currently supported options also available in erlang `ssl`:
 - `{verify, verify_type()}`
 - `{depth, integer()}`
 - `{fail_if_no_peer_cert, boolean()}`
-- `{certfile, path()}` (file should be in PEM format)
-- `{cacerts, [path()]}`
+- `{certfile, path()}`
+- `{cacertfile, [path()]}`
 - `{dhfile, path()}` 
 - `{ciphers, ciphers()}`
 

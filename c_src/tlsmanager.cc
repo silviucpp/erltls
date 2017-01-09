@@ -186,8 +186,8 @@ SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
         return NULL;
 #endif
 
-    if (!props.ca_file.empty())
-        SSL_CTX_load_verify_locations(ctx.get(), props.ca_file.c_str(), NULL);
+    if (!props.ca_cert_file.empty())
+        SSL_CTX_load_verify_locations(ctx.get(), props.ca_cert_file.c_str(), NULL);
     else
         SSL_CTX_set_default_verify_paths(ctx.get());
     
