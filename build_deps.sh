@@ -33,7 +33,7 @@ function BuildBoringSsl()
 	mkdir build
 	pushd build
 
-	cmake .. -DCMAKE_BUILD_TYPE=Release
+	cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-fPIC"
 	make
 	mkdir ../lib
 	cp crypto/libcrypto.a ../lib/libcrypto.a
