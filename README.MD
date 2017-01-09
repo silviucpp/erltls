@@ -64,7 +64,7 @@ Currently supported options also available in erlang `ssl`:
 - `{depth, integer()}`
 - `{fail_if_no_peer_cert, boolean()}`
 - `{certfile, path()}`
-- `{cacertfile, [path()]}`
+- `{cacertfile, path()}`
 - `{dhfile, path()}` 
 - `{ciphers, ciphers()}`
 

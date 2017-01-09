@@ -10,7 +10,7 @@
     {depth, integer()} |
     {fail_if_no_peer_cert, boolean()} |
     {certfile, path()} |
-    {cacerts, [Der::binary()]} |
+    {cacertfile, path()} |
     {dhfile, path()} |
     {ciphers, ciphers()} |
     {protocol, protocol()} |
