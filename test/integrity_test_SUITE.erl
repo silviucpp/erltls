@@ -212,7 +212,7 @@ test_owner_change(_Config) ->
 
     receive
         {ssl, Socket, Data} ->
-            self() ! Socket, Data
+            self() ! {ssl, Socket, Data}
     end,
 
     Pid = spawn_link(Fun),
