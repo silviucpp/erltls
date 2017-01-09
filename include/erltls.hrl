@@ -10,6 +10,8 @@
     {depth, integer()} |
     {fail_if_no_peer_cert, boolean()} |
     {certfile, path()} |
+    {keyfile, path()} |
+    {password, string()} |
     {cacertfile, path()} |
     {dhfile, path()} |
     {ciphers, ciphers()} |

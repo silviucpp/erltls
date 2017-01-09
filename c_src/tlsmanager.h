@@ -21,10 +21,12 @@ struct ContextProperties
     {}
 
     const SSL_METHOD* tls_proto;
-    std::string cert_file;
+    std::string certfile;
+    std::string keyfile;
+    std::string password;
     std::string ciphers;
     std::string dh_file;
-    std::string ca_cert_file;
+    std::string ca_certfile;
 
     uint32_t reuse_sessions_ttl_sec;
     bool use_session_ticket;
@@ -46,6 +48,7 @@ public:
 
     static SSL_CTX* CreateContext(const ContextProperties& props);
     static int VerifyCallback(int preverify_ok, X509_STORE_CTX* ctx);
+    static int PasswdCallback(char* buf, int num, int rwflag, void* userdata);
     static int GetSSLVerifyFlags(int verify, bool fail_if_no_peer_cert);
 
 private:

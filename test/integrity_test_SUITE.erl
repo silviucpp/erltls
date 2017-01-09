@@ -31,12 +31,19 @@ groups() -> [
         test_shutdown,
         downgrade_to_tcp,
         upgrade_to_tls,
-        test_dtls_mode
+        test_dtls_mode,
+        test_certificte_keyfile_and_pwd
     ]}
 ].
 
 get_certificate() ->
     <<"../../test/server.pem">>.
+
+get_certfile() ->
+    <<"../../test/certificate.cert">>.
+
+get_key() ->
+    <<"../../test/privatekey.key">>.
 
 init_per_suite(Config) ->
     ok = erltls:start(),
@@ -529,6 +536,41 @@ test_dtls_mode(_Config) ->
     {ok, Data} = erltls:recv(Socket, 0),
     <<"HELLO">> = Data,
     ok = erltls:send(Socket, Data),
+    ok = erltls:close(Socket),
+    ok = erltls:close(LSocket),
+    true.
+
+test_certificte_keyfile_and_pwd(_Config) ->
+    Port = 10000,
+    Opt = [
+        binary,
+        {packet, 0},
+        {active, false},
+        {ciphers, ["AES128-GCM-SHA256"]},
+        {verify, verify_none}
+    ],
+
+    ServerOpt = [
+        {certfile, get_certfile()},
+        {keyfile, get_key()},
+        {password, "erltls"}
+    ],
+
+    {ok, LSocket} = erltls:listen(Port, ServerOpt ++ Opt),
+
+    ClientProc = fun() ->
+        {ok, CSocket} = erltls:connect("127.0.0.1", Port, Opt),
+        ok = erltls:send(CSocket, <<"PING">>),
+        {ok, <<"PONG">>} = erltls:recv(CSocket, 0),
+        erltls:close(CSocket)
+                 end,
+
+    spawn(ClientProc),
+
+    {ok, Socket} = erltls:transport_accept(LSocket, 5000),
+    ok = erltls:ssl_accept(Socket),
+    {ok, <<"PING">>} = erltls:recv(Socket, 0),
+    ok = erltls:send(Socket, <<"PONG">>),
     ok = erltls:close(Socket),
     ok = erltls:close(LSocket),
     true.

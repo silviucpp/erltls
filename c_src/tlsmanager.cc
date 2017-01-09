@@ -12,6 +12,8 @@
 struct callback_data
 {
     int verify_depth;
+    char* password;
+    int password_length;
 };
 
 static char kCallbackDataTag[] = "callback_data";
@@ -20,15 +22,24 @@ static char kSslUserDataTag[] = "ssl_user_data";
 static int callback_data_index = -1;
 static int ssl_user_data_index = -1;
 
-static void callback_data_free(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl, void *argp)
+void callback_data_free(void *ptr)
+{
+    callback_data *cb_data = reinterpret_cast<callback_data*>(ptr);
+
+    if(cb_data->password)
+        enif_free(cb_data->password);
+
+    enif_free(ptr);
+}
+
+static void ssl_callback_data_free(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl, void *argp)
 {
     UNUSED(parent);
     UNUSED(ad);
     UNUSED(idx);
     UNUSED(argl);
     UNUSED(argp);
-    //callback_data *cb_data = reinterpret_cast<callback_data*>(ptr);
-	enif_free(ptr);
+    callback_data_free(ptr);
 }
 
 void TlsManager::InitOpenSSL()
@@ -41,7 +52,7 @@ void TlsManager::InitOpenSSL()
     ERR_load_BIO_strings();
     OpenSSL_add_all_algorithms();
 
-    callback_data_index = SSL_CTX_get_ex_new_index(0, reinterpret_cast<void*>(kCallbackDataTag), NULL, NULL, callback_data_free);
+    callback_data_index = SSL_CTX_get_ex_new_index(0, reinterpret_cast<void*>(kCallbackDataTag), NULL, NULL, ssl_callback_data_free);
     ssl_user_data_index = SSL_CTX_get_ex_new_index(0, reinterpret_cast<void*>(kSslUserDataTag), NULL, NULL, TlsSocket::SSlUserDataFree);
 }
 
@@ -111,24 +122,61 @@ int TlsManager::VerifyCallback(int ok, X509_STORE_CTX *x509_ctx)
     return ok;
 }
 
+int TlsManager::PasswdCallback(char *buf, int num, int rwflag, void *userdata)
+{
+    UNUSED(rwflag);
+
+    callback_data *cb_data = reinterpret_cast<callback_data*>(userdata);
+
+    if (cb_data && cb_data->password)
+    {
+        strncpy(buf, cb_data->password, num);
+        return cb_data->password_length;
+    }
+
+    return 0;
+}
+
 SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
 {
     scoped_ptr(ctx, SSL_CTX, SSL_CTX_new(props.tls_proto), SSL_CTX_free);
-    
-    if(!ctx.get())
+    scoped_ptr(cb_data, callback_data, reinterpret_cast<callback_data*>(enif_alloc(sizeof(callback_data))), callback_data_free);
+
+    if(!ctx.get() || !cb_data.get())
         return NULL;
+
+    cb_data->verify_depth = props.verify_depth;
+    cb_data->password = NULL;
+    cb_data->password_length = 0;
+
+    if(!SSL_CTX_set_ex_data(ctx.get(), callback_data_index, cb_data.get()))
+        return NULL;
+
+    if(!props.password.empty())
+    {
+        cb_data->password = reinterpret_cast<char*>(enif_alloc(props.password.length() + 1));
+        cb_data->password_length = static_cast<int>(props.password.length());
+        strcpy(cb_data->password, props.password.c_str());
+
+        SSL_CTX_set_default_passwd_cb(ctx.get(), PasswdCallback);
+        SSL_CTX_set_default_passwd_cb_userdata(ctx.get(), cb_data.get());
+    }
+
+    cb_data.release();
     
     SSL_CTX_set_session_cache_mode(ctx.get(), SSL_SESS_CACHE_OFF);
-
+    
     if(props.reuse_sessions_ttl_sec)
         SSL_CTX_set_timeout(ctx.get(), props.reuse_sessions_ttl_sec);
-
-    if(!props.cert_file.empty())
-    {
-        if(!SSL_CTX_use_certificate_chain_file(ctx.get(), props.cert_file.c_str()))
-            return NULL;
     
-        if(!SSL_CTX_use_PrivateKey_file(ctx.get(), props.cert_file.c_str(), SSL_FILETYPE_PEM))
+    if(!props.certfile.empty())
+    {
+        if(!SSL_CTX_use_certificate_chain_file(ctx.get(), props.certfile.c_str()))
+            return NULL;
+
+        std::string privatekey = props.keyfile.empty() ? props.certfile : props.keyfile;
+
+        if(!SSL_CTX_use_PrivateKey_file(ctx.get(), privatekey.c_str(), SSL_FILETYPE_PEM))
             return NULL;
     
         if(!SSL_CTX_check_private_key(ctx.get()))
@@ -186,8 +234,8 @@ SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
         return NULL;
 #endif
 
-    if (!props.ca_cert_file.empty())
-        SSL_CTX_load_verify_locations(ctx.get(), props.ca_cert_file.c_str(), NULL);
+    if (!props.ca_certfile.empty())
+        SSL_CTX_load_verify_locations(ctx.get(), props.ca_certfile.c_str(), NULL);
     else
         SSL_CTX_set_default_verify_paths(ctx.get());
     
@@ -195,18 +243,6 @@ SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
     SSL_CTX_set_mode(ctx.get(), SSL_MODE_RELEASE_BUFFERS);
 #endif
     
-    scoped_ptr(cb_data, callback_data, reinterpret_cast<callback_data*>(enif_alloc(sizeof(callback_data))), enif_free);
-
-    if(!cb_data.get())
-        return NULL;
-
-    cb_data->verify_depth = props.verify_depth;
-
-    if(!SSL_CTX_set_ex_data(ctx.get(), callback_data_index, cb_data.get()))
-        return NULL;
-
-    cb_data.release();
-
     SSL_CTX_set_verify_depth(ctx.get(), props.verify_depth);
     SSL_CTX_set_verify(ctx.get(), GetSSLVerifyFlags(props.verify_mode, props.fail_if_no_peer_cert), VerifyCallback);
 

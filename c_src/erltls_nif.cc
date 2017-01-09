@@ -38,6 +38,8 @@ const char kAtomCtxTlsProtocol[] = "protocol";
 const char kAtomCtxCertfile[] = "certfile";
 const char kAtomCtxDhfile[] = "dhfile";
 const char kAtomCtxCaCertFile[] = "cacertfile";
+const char kAtomCtxKeyfile[] = "keyfile";
+const char kAtomCtxPassword[] = "password";
 const char kAtomCtxCiphers[] = "ciphers";
 const char kAtomCtxReuseSessionsTtl[] = "reuse_sessions_ttl";
 const char kAtomCtxUseSessionTicket[] = "use_session_ticket";
@@ -91,6 +93,8 @@ int on_nif_load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
 
     ATOMS.atomCtxTlsProtocol = make_atom(env, kAtomCtxTlsProtocol);
     ATOMS.atomCtxCertfile = make_atom(env, kAtomCtxCertfile);
+    ATOMS.atomCtxKeyfile = make_atom(env, kAtomCtxKeyfile);
+    ATOMS.atomCtxPassword = make_atom(env, kAtomCtxPassword);
     ATOMS.atomCtxDhfile = make_atom(env, kAtomCtxDhfile);
     ATOMS.atomCtxCaCertFile = make_atom(env, kAtomCtxCaCertFile);
     ATOMS.atomCtxCiphers = make_atom(env, kAtomCtxCiphers);
