@@ -16,7 +16,13 @@ This way we don't have to use any kind of locking at native level. Also read/wri
 
 - DTLS support (both v1 and v1.2)
 - RFC5077 for resuming sessions using ticketing   
-- Compression support 
+- Compression support
+- Can be used with both [OpenSSL][4] or [BoringSSL][3]
+
+### OpenSSL fork
+
+The library is working with both [OpenSSL][4] or [BoringSSL][3]. Be default OpenSSL is used. To change the behavior modify the
+`USE_BORINGSSL` variable inside `rebar.config`.
 
 ### User guide
 
@@ -106,3 +112,5 @@ A full handshake will be negotiated.
 
 [1]:http://erlang.org/doc/man/ssl.html
 [2]:https://www.ietf.org/rfc/rfc5077.txt
+[3]:https://boringssl.googlesource.com/boringssl/
+[4]:https://www.openssl.org/
