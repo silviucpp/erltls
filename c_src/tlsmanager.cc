@@ -8,6 +8,7 @@
 #include <openssl/rand.h>
 #include <openssl/err.h>
 #include <memory>
+#include <string.h>
 
 struct callback_data
 {

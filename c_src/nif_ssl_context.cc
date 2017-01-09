@@ -5,6 +5,7 @@
 #include "macros.h"
 
 #include <memory>
+#include <string.h>
 
 static const char kErrorFailedToCreateContext[]    = "failed to create context";
 static const char kErrorFailedToAllocNifContext[]  = "failed to alloc enif_ssl_ctx";
