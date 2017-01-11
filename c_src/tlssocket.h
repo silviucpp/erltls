@@ -61,7 +61,6 @@ private:
     
     ERL_NIF_TERM SendPendingAsync(ErlNifEnv *env);
     ERL_NIF_TERM DoHandshakeOp(ErlNifEnv *env);
-    ERL_NIF_TERM DoReadOp(ErlNifEnv *env);
     ERL_NIF_TERM GetPendingData(ErlNifEnv *env, int pending);
     bool ProtocolToAtom(const std::string& protocol, ERL_NIF_TERM* term);
     

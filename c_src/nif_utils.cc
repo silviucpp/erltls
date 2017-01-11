@@ -3,6 +3,10 @@
 
 #include <string.h>
 
+// This should correspond to the similar define in ezlib.erl
+
+#define MAX_BYTES_TO_NIF 40000
+
 ERL_NIF_TERM make_atom(ErlNifEnv* env, const char* name)
 {
     ERL_NIF_TERM ret;
@@ -49,6 +53,14 @@ ERL_NIF_TERM make_badarg(ErlNifEnv* env)
 ERL_NIF_TERM make_ok_result(ErlNifEnv* env, ERL_NIF_TERM term)
 {
     return enif_make_tuple(env, 2, ATOMS.atomOk, term);
+}
+
+void consume_timeslice(ErlNifEnv *env, size_t bytes)
+{
+    int cost = static_cast<int>((bytes * 100) / MAX_BYTES_TO_NIF);
+
+    if(cost)
+        enif_consume_timeslice(env, cost > 100 ? 100 : cost);
 }
 
 bool get_binary(ErlNifEnv* env, ERL_NIF_TERM term, ErlNifBinary* bin)

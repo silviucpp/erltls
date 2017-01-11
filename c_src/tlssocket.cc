@@ -111,19 +111,33 @@ ERL_NIF_TERM TlsSocket::FeedData(ErlNifEnv* env, const ErlNifBinary* bin)
 {
     if(!ssl_)
         return make_error(env, ATOMS.atomSslNotStarted);
-    
-    if(bin->size)
-    {
-        int ret = BIO_write(bio_read_, bin->data, static_cast<int>(bin->size));
 
-        if(ret != static_cast<int>(bin->size))
-            return make_error(env, "BIO_write failed");
-    }
+    int ret = BIO_write(bio_read_, bin->data, static_cast<int>(bin->size));
+
+    if(ret != static_cast<int>(bin->size))
+        return make_error(env, "BIO_write failed");
 
     if (!SSL_is_init_finished(ssl_))
         return ATOMS.atomOk;
-    
-    return DoReadOp(env);
+
+    ByteBuffer buff(kTlsFrameSize);
+    uint8_t buffer[kTlsFrameSize];
+    int r;
+
+    while((r = SSL_read(ssl_, buffer, kTlsFrameSize)) > 0)
+        buff.WriteBytes(buffer, r);
+
+    consume_timeslice(env, bin->size);
+
+    if(r < 0)
+    {
+        int error = SSL_get_error(ssl_, r);
+
+        if(error != SSL_ERROR_WANT_READ)
+            return make_error(env, ERR_error_string(error, NULL));
+    }
+
+    return make_ok_result(env, make_binary(env, buff.Data(), buff.Length()));
 }
 
 ERL_NIF_TERM TlsSocket::SendData(ErlNifEnv* env, const ErlNifBinary* bin)
@@ -134,6 +148,8 @@ ERL_NIF_TERM TlsSocket::SendData(ErlNifEnv* env, const ErlNifBinary* bin)
     ASSERT(bin->size > 0);
 
     int ret = SSL_write(ssl_, bin->data, static_cast<int>(bin->size));
+
+    consume_timeslice(env, bin->size);
 
     if(ret <= 0)
     {
@@ -169,26 +185,6 @@ ERL_NIF_TERM TlsSocket::Handshake(ErlNifEnv* env)
     }
     
     return ATOMS.atomOk;
-}
-
-ERL_NIF_TERM TlsSocket::DoReadOp(ErlNifEnv* env)
-{
-    ByteBuffer buff(kTlsFrameSize);
-    uint8_t buffer[kTlsFrameSize];
-    int r;
-    
-    while((r = SSL_read(ssl_, buffer, kTlsFrameSize)) > 0)
-        buff.WriteBytes(buffer, r);
-
-    if(r < 0)
-    {
-        int error = SSL_get_error(ssl_, r);
-        
-        if(error != SSL_ERROR_WANT_READ)
-            return make_error(env, ERR_error_string(error, NULL));
-    }
-    
-    return make_ok_result(env, make_binary(env, buff.Data(), buff.Length()));
 }
 
 ERL_NIF_TERM TlsSocket::SendPending(ErlNifEnv* env)

@@ -12,6 +12,10 @@
 -define(SSL_SHUTDOWN_UNIDIRECTIONAL, 1).
 -define(SSL_SHUTDOWN_BIDIRECTIONAL, 2).
 
+%% Maximum bytes passed to the NIF handler at once
+%% Current value is erlang:system_info(context_reductions) * 20
+-define(MAX_BYTES_TO_NIF, 40000).
+
 -record(state, {
     tcp,
     tls_ref,
@@ -129,10 +133,10 @@ init(#state{tcp = TcpSocket, tls_ref = TlsRef} = State) ->
     {ok, State#state{owner_monitor_ref = OwnerMonitorRef, tcp_monitor_ref = TcpMonitorRef, socket_ref = SocketRef}}.
 
 handle_call({encode_data, Data}, _From, #state{tls_ref = TlsSock} = State) ->
-    {reply, erltls_nif:ssl_send_data(TlsSock, Data), State};
+    {reply,send_data(TlsSock, Data), State};
 
 handle_call({decode_data, TlsData}, _From, #state{tls_ref = TlsSock, emul_opts = EmulOpts} = State) ->
-    Response = case erltls_nif:ssl_feed_data(TlsSock, TlsData) of
+    Response = case feed_data(TlsSock, TlsData) of
         {ok, Data} ->
             {ok, convert_data(EmulOpts#emulated_opts.mode, Data)};
         Error ->
@@ -240,7 +244,7 @@ handle_cast(Request, State) ->
     {noreply, State}.
 
 handle_info({tcp, TcpSocket, TlsData}, #state{tcp = TcpSocket, tls_ref = TlsRef, owner_pid = Pid, socket_ref = SockRef, emul_opts = EmOpt} = State) ->
-    case erltls_nif:ssl_feed_data(TlsRef, TlsData) of
+    case feed_data(TlsRef, TlsData) of
         {ok, RawData} ->
             Pid ! {ssl, SockRef, convert_data(EmOpt#emulated_opts.mode, RawData)};
         Error ->
@@ -409,6 +413,57 @@ send_pending(TcpSocket, TlsSock) ->
         {ok, Data} ->
             gen_tcp:send(TcpSocket, Data)
     end.
+
+send_data(TlsSock, Data) when is_binary(Data) ->
+    send_data(TlsSock, Data, byte_size(Data), <<>>);
+send_data(TlsSock, Data) ->
+    send_data(TlsSock, iolist_to_binary(Data)).
+
+send_data(TlsSock, Data, Size, Buffer) ->
+    case Size > ?MAX_BYTES_TO_NIF of
+        true ->
+            <<Chunk:?MAX_BYTES_TO_NIF/binary, Rest/binary>> = Data,
+            case erltls_nif:ssl_send_data(TlsSock, Chunk) of
+                {ok, ProcessedData} ->
+                    send_data(TlsSock, Rest, Size - ?MAX_BYTES_TO_NIF, get_buffer(Buffer, ProcessedData));
+                Error ->
+                    Error
+            end;
+        _ ->
+            case erltls_nif:ssl_send_data(TlsSock, Data) of
+                {ok, ProcessedData} ->
+                    {ok, get_buffer(Buffer, ProcessedData)};
+                Error ->
+                    Error
+            end
+    end.
+
+feed_data(TlsSock, Data) ->
+    feed_data(TlsSock, Data, byte_size(Data), <<>>).
+
+feed_data(TlsSock, Data, Size, Buffer) ->
+    case Size > ?MAX_BYTES_TO_NIF of
+        true ->
+            <<Chunk:?MAX_BYTES_TO_NIF/binary, Rest/binary>> = Data,
+            case erltls_nif:ssl_feed_data(TlsSock, Chunk) of
+                {ok, ProcessedData} ->
+                    feed_data(TlsSock, Rest, Size - ?MAX_BYTES_TO_NIF, get_buffer(Buffer, ProcessedData));
+                Error ->
+                    Error
+            end;
+        _ ->
+            case erltls_nif:ssl_feed_data(TlsSock, Data) of
+                {ok, ProcessedData} ->
+                    {ok, get_buffer(Buffer, ProcessedData)};
+                Error ->
+                    Error
+            end
+    end.
+
+get_buffer(<<>>, NewData) ->
+    NewData;
+get_buffer(Data, NewData) ->
+    <<Data/binary, NewData/binary>>.
 
 shutdown_ssl(TcpSocket, TlsRef) ->
     do_shutdown_ssl(TcpSocket, TlsRef, ?SSL_SHUTDOWN_UNIDIRECTIONAL, <<>>, infinity).
