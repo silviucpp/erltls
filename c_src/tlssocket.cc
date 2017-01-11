@@ -44,21 +44,15 @@ bool TlsSocket::Init(SSL_CTX* ctx, kSslRole role, long flags, const std::string&
     
     SSL_set_bio(ssl_, bio_read_, bio_write_);
 
-    int options = SSL_OP_NO_SSLv2;
+    uint32_t options = SSL_OP_NO_SSLv2 | SSL_OP_NO_COMPRESSION;
 
     if((flags & kFlagUseSessionTicket) == 0)
         options |= SSL_OP_NO_TICKET;
     
-#ifdef SSL_OP_NO_COMPRESSION
-    if((flags & kFlagUseCompression) == 0)
-        options |= SSL_OP_NO_COMPRESSION;
-#endif
-    
     if(role == kSslRoleServer)
         options |= SSL_OP_ALL;
     
-    if(!SSL_set_options(ssl_, options))
-        return false;
+    SSL_set_options(ssl_, options);
     
     if(!session_cache.empty())
     {

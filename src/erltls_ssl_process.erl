@@ -5,8 +5,7 @@
 
 -behaviour(gen_server).
 
--define(USE_COMPRESSION_FLAG, 1).
--define(SESSION_TICKET_FLAG, 2).
+-define(SESSION_TICKET_FLAG, 1).
 
 -define(SERVER, ?MODULE).
 
@@ -39,7 +38,7 @@
     get_options/1,
     set_emulated_options/2,
     get_emulated_options/2,
-    controlling_process/2,
+    controlling_process/3,
     session_reused/1,
     get_session_asn1/1,
     peercert/1,
@@ -69,8 +68,20 @@ get_options(Pid) ->
 get_emulated_options(Pid, OptionNames) ->
     call(Pid, {get_emulated_options, OptionNames}).
 
-controlling_process(Pid, NewOwner) ->
-    call(Pid, {controlling_process, self(), NewOwner}).
+controlling_process(Pid, Socket, NewOwner) ->
+    case call(Pid, {controlling_process, self(), NewOwner}) of
+        ok ->
+            receive
+                {erltls_message_transfer, Socket} ->
+                    transfer_messages(Socket, NewOwner),
+                    Pid ! {erltls_transfer_completed, Socket},
+                    ok
+            after 10000 ->
+                {error, timeout}
+            end;
+        Error ->
+            Error
+    end.
 
 handshake(Pid, TcpSocket, Timeout) ->
     call(Pid, {handshake, TcpSocket, Timeout}).
@@ -285,20 +296,13 @@ call(Pid, Message) ->
 
 %internal methods
 
-get_compression(true) ->
-    ?USE_COMPRESSION_FLAG;
-get_compression(_) ->
-    0.
-
 get_session_ticket(true) ->
     ?SESSION_TICKET_FLAG;
 get_session_ticket(_) ->
     0.
 
 get_ssl_flags(Options) ->
-    CompressionType = get_compression(erltls_utils:lookup(compression, Options, false)),
-    UseSessionTicket = get_session_ticket(erltls_options:use_session_ticket(erltls_utils:lookup(use_session_ticket, Options))),
-    CompressionType bor UseSessionTicket.
+    get_session_ticket(erltls_options:use_session_ticket(erltls_utils:lookup(use_session_ticket, Options))).
 
 get_ssl_process(?SSL_ROLE_SERVER, TcpSocket, TlsSock, TlsOpts, EmulatedOpts, _Timeout) ->
     start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, false);
@@ -344,6 +348,24 @@ change_active(_TcpSocket, CurrentMode, NewMode) when CurrentMode =:= NewMode ->
     ok;
 change_active(TcpSocket, _CurrentMode, NewMode) ->
     inet:setopts(TcpSocket, [{active, NewMode}]).
+
+transfer_messages(Sock, NewOwner) ->
+    receive
+        {ssl, Sock, Data} ->
+            NewOwner ! {ssl, Sock, Data},
+            transfer_messages(Sock, NewOwner);
+        {ssl_closed, Sock} ->
+            NewOwner ! {ssl_closed, Sock},
+            transfer_messages(Sock, NewOwner);
+        {ssl_error, Sock, Reason} ->
+            NewOwner ! {ssl_error, Sock, Reason},
+            transfer_messages(Sock, NewOwner);
+        {ssl_passive, Sock} ->
+            NewOwner ! {ssl_passive, Sock},
+            transfer_messages(Sock, NewOwner)
+    after 0 ->
+        ok
+    end.
 
 do_handshake(TcpSocket, TlsSock, Timeout) ->
     case erltls_nif:ssl_get_method(TlsSock) of

@@ -16,7 +16,6 @@
     {dhfile, path()} |
     {ciphers, ciphers()} |
     {protocol, protocol()} |
-    {compression, boolean()} |
     {reuse_sessions_ttl, integer()} |
     {use_session_ticket, boolean() | {boolean(), binary()}}.
 

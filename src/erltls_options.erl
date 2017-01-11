@@ -64,7 +64,7 @@ get_options([H|T], TcpOpt, TlsOpt, EmulatedOpt) ->
 
     case is_tls_option(OptionKey) of
         true ->
-            validate_tls_option(H),
+            % validation for the other tls options are in nif code
             get_options(T, TcpOpt, [H|TlsOpt], EmulatedOpt);
         _ ->
             case is_emulated_option(OptionKey) of
@@ -91,7 +91,7 @@ is_tls_option(Key) ->
         %options available in both ssl and erltls
         certfile, keyfile, password, cacertfile, dhfile, ciphers, verify, depth, fail_if_no_peer_cert,
         %options available only in erltls
-        compression, use_session_ticket, reuse_sessions_ttl, protocol,
+        use_session_ticket, reuse_sessions_ttl, protocol,
         % todo: implement the following options:
         verify_fun, cert, key,
         cacerts, dh, user_lookup_fun, psk_identity, srp_identity, ssl_imp,
@@ -110,17 +110,6 @@ is_emulated_option(packet_size) ->
     true;
 is_emulated_option(_) ->
     false.
-
-validate_tls_option({compression, Value}) ->
-    case is_boolean(Value) of
-        false ->
-            throw({error, {options, {compression, Value} }});
-        _ ->
-        ok
-    end;
-validate_tls_option(_) ->
-    % validation for the other tls options are in nif code
-    ok.
 
 validate_emulated_option(packet, Value) when not (is_atom(Value) orelse is_integer(Value)) ->
     throw({error, {options, {packet,Value}}});
