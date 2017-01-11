@@ -2,9 +2,8 @@
 -author("silviu.caragea").
 
 -define(NOT_LOADED, not_loaded(?LINE)).
-%% Maximum bytes passed to the NIF handler at once
-%% Current value is erlang:system_info(context_reductions) * 20
--define(MAX_BYTES_TO_NIF, 40000).
+%% Maximum bytes passed to the NIF handler at once (65Kb)
+-define(MAX_BYTES_TO_NIF, 65536).
 
 -on_load(load_nif/0).
 

@@ -3,9 +3,9 @@
 
 #include <string.h>
 
-// This should correspond to the similar define in ezlib.erl
+// This should correspond to the similar define in erltls_nif.erl
 
-#define MAX_BYTES_TO_NIF 40000
+#define MAX_BYTES_TO_NIF 65536
 
 ERL_NIF_TERM make_atom(ErlNifEnv* env, const char* name)
 {
