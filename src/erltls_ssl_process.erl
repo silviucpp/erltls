@@ -242,7 +242,14 @@ handle_cast(Request, State) ->
 handle_info({tcp, TcpSocket, TlsData}, #state{tcp = TcpSocket, tls_ref = TlsRef, owner_pid = Pid, socket_ref = SockRef, emul_opts = EmOpt} = State) ->
     case erltls_nif:chunk_feed_data(TlsRef, TlsData) of
         {ok, RawData} ->
-            Pid ! {ssl, SockRef, convert_data(EmOpt#emulated_opts.mode, RawData)};
+            case byte_size(RawData) of
+                0 ->
+                    %need more data. make connection active again
+                    mark_active_flag_again(TcpSocket),
+                    {noreply, State};
+                _ ->
+                    Pid ! {ssl, SockRef, convert_data(EmOpt#emulated_opts.mode, RawData)}
+            end;
         Error ->
             Pid ! {ssl_error, SockRef, Error}
     end,
@@ -456,6 +463,21 @@ do_shutdown_ssl_continue(TcpSocket, TlsRef, ?SSL_SHUTDOWN_BIDIRECTIONAL, Timeout
                     end;
                 Error ->
                     Error
+            end;
+        Error ->
+            Error
+    end.
+
+mark_active_flag_again(TcpSocket) ->
+    case inet:getopts(TcpSocket, [active]) of
+        {ok, [{active, Mode}]} ->
+            case Mode of
+                false ->
+                    inet:setopts(TcpSocket, [{active, once}]);
+                N when is_integer(N) ->
+                    inet:setopts(TcpSocket, [{active, N+1}]);
+                _ ->
+                    ok
             end;
         Error ->
             Error

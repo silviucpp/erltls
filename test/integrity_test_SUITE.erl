@@ -32,7 +32,8 @@ groups() -> [
         downgrade_to_tcp,
         upgrade_to_tls,
         test_dtls_mode,
-        test_certificte_keyfile_and_pwd
+        test_certificte_keyfile_and_pwd,
+        test_avoid_getting_empty_packages
     ]}
 ].
 
@@ -574,3 +575,44 @@ test_certificte_keyfile_and_pwd(_Config) ->
     ok = erltls:close(Socket),
     ok = erltls:close(LSocket),
     true.
+
+test_avoid_getting_empty_packages(_Config) ->
+    Port = 10000,
+    Opt = [
+        binary,
+        {packet, 0},
+        {active, false},
+        {ciphers, ["AES128-GCM-SHA256"]},
+        {verify, verify_none}
+    ],
+
+    Message = <<0:20000/little-signed-integer-unit:8>>,
+    {ok, LSocket} = erltls:listen(Port, [{certfile, get_certificate()} | Opt]),
+
+    ClientProc = fun() ->
+        {ok, CSocket} = erltls:connect("127.0.0.1", Port, Opt),
+        ok = erltls:send(CSocket, Message)
+                 end,
+
+    spawn(ClientProc),
+
+    {ok, Socket} = erltls:transport_accept(LSocket, 5000),
+    ok = erltls:ssl_accept(Socket),
+
+    Message = recv_bytes(Socket, byte_size(Message), <<>>),
+
+    ok = erltls:close(Socket),
+    ok = erltls:close(LSocket),
+    true.
+
+recv_bytes(_Socket, 0, Acc) ->
+    Acc;
+recv_bytes(Socket, Size, Acc) ->
+    {ok, [{active, false}]} = erltls:getopts(Socket, [active]),
+    ok = erltls:setopts(Socket, [{active, once}]),
+    receive
+        {ssl, Socket, Message} when byte_size(Message) > 0 ->
+            recv_bytes(Socket, Size - byte_size(Message), <<Acc/binary, Message/binary>>);
+        Msg ->
+            throw(Msg)
+    end.
