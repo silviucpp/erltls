@@ -2,6 +2,9 @@
 -author("silviu.caragea").
 
 -define(NOT_LOADED, not_loaded(?LINE)).
+%% Maximum bytes passed to the NIF handler at once
+%% Current value is erlang:system_info(context_reductions) * 20
+-define(MAX_BYTES_TO_NIF, 40000).
 
 -on_load(load_nif/0).
 
@@ -12,6 +15,8 @@
     ssl_set_owner/2,
     ssl_handshake/1,
     ssl_send_pending/1,
+    chunk_send_data/2,
+    chunk_feed_data/2,
     ssl_feed_data/2,
     ssl_send_data/2,
     ssl_shutdown/2,
@@ -90,3 +95,49 @@ ssl_get_session_info(_SocketRef) ->
 
 version() ->
     ?NOT_LOADED.
+
+chunk_send_data(TlsSock, Data) when is_binary(Data) ->
+    chunk_send_data(TlsSock, Data, byte_size(Data), <<>>);
+chunk_send_data(TlsSock, Data) ->
+    chunk_send_data(TlsSock, iolist_to_binary(Data)).
+
+chunk_send_data(TlsSock, Data, Size, Buffer) ->
+    case Size > ?MAX_BYTES_TO_NIF of
+        true ->
+            <<Chunk:?MAX_BYTES_TO_NIF/binary, Rest/binary>> = Data,
+            case ssl_send_data(TlsSock, Chunk) of
+                {ok, ProcessedData} ->
+                    chunk_send_data(TlsSock, Rest, Size - ?MAX_BYTES_TO_NIF, erltls_utils:get_buffer(Buffer, ProcessedData));
+                Error ->
+                    Error
+            end;
+        _ ->
+            case ssl_send_data(TlsSock, Data) of
+                {ok, ProcessedData} ->
+                    {ok, erltls_utils:get_buffer(Buffer, ProcessedData)};
+                Error ->
+                    Error
+            end
+    end.
+
+chunk_feed_data(TlsSock, Data) ->
+    chunk_feed_data(TlsSock, Data, byte_size(Data), <<>>).
+
+chunk_feed_data(TlsSock, Data, Size, Buffer) ->
+    case Size > ?MAX_BYTES_TO_NIF of
+        true ->
+            <<Chunk:?MAX_BYTES_TO_NIF/binary, Rest/binary>> = Data,
+            case ssl_feed_data(TlsSock, Chunk) of
+                {ok, ProcessedData} ->
+                    chunk_feed_data(TlsSock, Rest, Size - ?MAX_BYTES_TO_NIF, erltls_utils:get_buffer(Buffer, ProcessedData));
+                Error ->
+                    Error
+            end;
+        _ ->
+            case ssl_feed_data(TlsSock, Data) of
+                {ok, ProcessedData} ->
+                    {ok, erltls_utils:get_buffer(Buffer, ProcessedData)};
+                Error ->
+                    Error
+            end
+    end.

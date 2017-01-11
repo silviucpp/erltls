@@ -7,7 +7,8 @@
     lookup/3,
     delete/2,
     ets_set/3,
-    ets_get/2
+    ets_get/2,
+    get_buffer/2
 ]).
 
 to_bin(Data) when is_binary(Data) ->
@@ -49,3 +50,8 @@ ets_get(Tab, Identifier) ->
         Error ->
             Error
     end.
+
+get_buffer(<<>>, NewData) ->
+    NewData;
+get_buffer(Data, NewData) ->
+    <<Data/binary, NewData/binary>>.
