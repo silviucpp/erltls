@@ -33,6 +33,7 @@ groups() -> [
         upgrade_to_tls,
         test_dtls_mode,
         test_certificte_keyfile_and_pwd,
+        test_passive_mode,
         test_avoid_getting_empty_packages
     ]}
 ].
@@ -572,6 +573,41 @@ test_certificte_keyfile_and_pwd(_Config) ->
     ok = erltls:ssl_accept(Socket),
     {ok, <<"PING">>} = erltls:recv(Socket, 0),
     ok = erltls:send(Socket, <<"PONG">>),
+    ok = erltls:close(Socket),
+    ok = erltls:close(LSocket),
+    true.
+
+test_passive_mode(_Config) ->
+    Port = 10000,
+    Opt = [
+        binary,
+        {packet, 0},
+        {active, false},
+        {ciphers, ["AES128-GCM-SHA256"]},
+        {verify, verify_none}
+    ],
+
+    Message = <<0:20000/little-signed-integer-unit:8>>,
+    MessageSize = byte_size(Message),
+    {ok, LSocket} = erltls:listen(Port, [{certfile, get_certificate()} | Opt]),
+
+    ClientProc = fun() ->
+        {ok, CSocket} = erltls:connect("127.0.0.1", Port, Opt),
+        ok = erltls:send(CSocket, Message)
+                 end,
+
+    spawn(ClientProc),
+
+    {ok, Socket} = erltls:transport_accept(LSocket, 5000),
+    ok = erltls:ssl_accept(Socket),
+
+    {ok, Message0} = erltls:recv(Socket, MessageSize-4223),
+    {ok, Message1} = erltls:recv(Socket, 2021),
+    {ok, Message2} = erltls:recv(Socket, 2200),
+    Message3 = recv_bytes(Socket, 2, <<>>),
+    2 = byte_size(Message3),
+
+    Message = <<Message0/binary, Message1/binary, Message2/binary, Message3/binary>>,
     ok = erltls:close(Socket),
     ok = erltls:close(LSocket),
     true.

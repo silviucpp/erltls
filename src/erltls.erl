@@ -156,15 +156,10 @@ getopts(#tlssocket{tcp_sock = TcpSock, ssl_pid = Pid}, OptionNames) ->
 -spec setopts(tlssocket(),  [gen_tcp:option()]) ->
     ok | {error, reason()}.
 
-setopts(#tlssocket{tcp_sock = TcpSock, ssl_pid = Pid}, Options) ->
+setopts(#tlssocket{ssl_pid = Pid}, Options) ->
     case erltls_options:get_inet_options(Options) of
         {ok, InetOpts, EmulatedOpts} ->
-            case set_inet_opts(TcpSock, InetOpts) of
-                ok ->
-                    erltls_ssl_process:set_emulated_options(Pid, EmulatedOpts);
-                Error ->
-                    Error
-            end;
+            erltls_ssl_process:setopts(Pid, InetOpts, EmulatedOpts);
         Error ->
             Error
     end.
@@ -303,10 +298,22 @@ recv(Socket, Length) ->
 -spec recv(tlssocket(), integer(), timeout()) -> {ok, binary()| list()} | {error, reason()}.
 
 recv(#tlssocket{tcp_sock = TcpSock, ssl_pid = Pid}, Length, Timeout) ->
-    %todo: fix this method and implement proper Length behaviour
-    case gen_tcp:recv(TcpSock, Length, Timeout) of
+    case erltls_ssl_process:get_pending_buffer(Pid, Length) of
+        need_more ->
+            passive_read_more(TcpSock, Pid, Length, Timeout);
+        Response->
+            Response
+    end.
+
+passive_read_more(TcpSock, TlsPid, TotalLength, Timeout) ->
+    case gen_tcp:recv(TcpSock, 0, Timeout) of
         {ok, Packet} ->
-            erltls_ssl_process:decode_data(Pid, Packet);
+            case erltls_ssl_process:decode_data(TlsPid, Packet, TotalLength) of
+                need_more ->
+                    passive_read_more(TcpSock, TlsPid, TotalLength, Timeout);
+                Response  ->
+                    Response
+            end;
         Error ->
             Error
     end.
@@ -350,11 +357,6 @@ versions() ->
     erltls_nif:version().
 
 %internals
-
-set_inet_opts(_TcpSock, []) ->
-    ok;
-set_inet_opts(TcpSock, Options) ->
-    inet:setopts(TcpSock, Options).
 
 do_connect(TcpSocket, TlsOpt, EmulatedOpts, Timeout) when is_list(EmulatedOpts) ->
     UseSessionTicket = erltls_options:use_session_ticket(erltls_utils:lookup(use_session_ticket, TlsOpt)),

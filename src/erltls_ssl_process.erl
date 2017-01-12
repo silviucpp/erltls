@@ -22,7 +22,8 @@
     owner_monitor_ref,
     tcp_monitor_ref,
     hk_completed = false,
-    socket_ref
+    socket_ref,
+    buffer = <<>>
 }).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -32,9 +33,10 @@
     new/6,
     handshake/3,
     encode_data/2,
-    decode_data/2,
+    decode_data/3,
+    get_pending_buffer/2,
     get_options/1,
-    set_emulated_options/2,
+    setopts/3,
     get_emulated_options/2,
     controlling_process/3,
     session_reused/1,
@@ -69,16 +71,17 @@ handshake(Pid, TcpSocket, Timeout) ->
 encode_data(Pid, Data) ->
     call(Pid, {encode_data, Data}).
 
-decode_data(Pid, Data) ->
-    call(Pid, {decode_data, Data}).
+decode_data(Pid, Data, ExpectedLength) ->
+    call(Pid, {decode_data, Data, ExpectedLength}).
+
+get_pending_buffer(Pid, Length) ->
+    call(Pid, {get_pending_buffer, Length}).
 
 get_options(Pid) ->
     call(Pid, get_options).
 
-set_emulated_options(_, []) ->
-    ok;
-set_emulated_options(Pid, Opts) ->
-    call(Pid, {set_emulated_options, Opts}).
+setopts(Pid, InetOpts, EmulatedOpts) ->
+    call(Pid, {setopts, InetOpts, EmulatedOpts}).
 
 get_emulated_options(Pid, OptionNames) ->
     call(Pid, {get_emulated_options, OptionNames}).
@@ -135,17 +138,39 @@ init(#state{tcp = TcpSocket, tls_ref = TlsRef} = State) ->
 handle_call({encode_data, Data}, _From, #state{tls_ref = TlsSock} = State) ->
     {reply, erltls_nif:chunk_send_data(TlsSock, Data), State};
 
-handle_call({decode_data, TlsData}, _From, #state{tls_ref = TlsSock, emul_opts = EmulOpts} = State) ->
-    Response = case erltls_nif:chunk_feed_data(TlsSock, TlsData) of
-        {ok, Data} ->
-            {ok, convert_data(EmulOpts#emulated_opts.mode, Data)};
+handle_call({decode_data, TlsData, ExpectedLength}, _From, #state{tls_ref = TlsSock, emul_opts = EmOpt, buffer = Bf} = State) ->
+    case erltls_nif:chunk_feed_data(TlsSock, TlsData) of
+        {ok, NewData} ->
+            Buffer = erltls_utils:get_buffer(Bf, NewData),
+            case process_pending_data(Buffer, ExpectedLength, EmOpt) of
+                {ok, FinalData, Rest} ->
+                    {reply, {ok, FinalData}, State#state{buffer = Rest}};
+                NeedMore ->
+                    {reply, NeedMore, State#state{buffer = Buffer}}
+            end;
         Error ->
-            Error
-    end,
-    {reply, Response, State};
+            {reply, Error, State}
+    end;
 
-handle_call({set_emulated_options, Opts}, _From, #state{emul_opts = EmulatedOps} = State) ->
-    {reply, ok, State#state{emul_opts = erltls_options:emulated_list2record(Opts, EmulatedOps)}};
+handle_call({get_pending_buffer, Length}, _From, #state{buffer = Buffer, emul_opts = EmOpt} = State) ->
+    case process_pending_data(Buffer, Length, EmOpt) of
+        {ok, Data, Rest} ->
+            {reply, {ok, Data}, State#state{buffer = Rest}};
+        NeedMore ->
+            {reply, NeedMore, State}
+    end;
+
+handle_call({setopts, InetOpts0, NewEmulatedOpts}, _From, #state{tcp = TcpSock, emul_opts = EmulatedOps0, buffer = Buffer0} = State) ->
+
+    EmulatedOpts = erltls_options:emulated_list2record(NewEmulatedOpts, EmulatedOps0),
+    {InetOpts, Buffer} = get_inet_opts(Buffer0, InetOpts0, EmulatedOpts, State),
+
+    case set_inet_opts(TcpSock, InetOpts) of
+        ok ->
+            {reply, ok, State#state {emul_opts = EmulatedOpts, buffer = Buffer}};
+        Error ->
+            {reply, Error, State#state {buffer = Buffer}}
+    end;
 
 handle_call(get_options, _From, #state{emul_opts = EmulatedOpts, tls_opts = TlsOpts} = State) ->
     {reply, {ok, TlsOpts, erltls_options:emulated_record2list(EmulatedOpts)}, State};
@@ -243,20 +268,28 @@ handle_cast(Request, State) ->
     ?ERROR_MSG("handle_cast unknown request: ~p", [Request]),
     {noreply, State}.
 
-handle_info({tcp, TcpSocket, TlsData}, #state{tcp = TcpSocket, tls_ref = TlsRef, owner_pid = Pid, socket_ref = SockRef, emul_opts = EmOpt} = State) ->
+handle_info({tcp, TcpSocket, TlsData}, #state{tcp = TcpSocket, tls_ref = TlsRef, owner_pid = Pid, socket_ref = SockRef, emul_opts = EmOpt, buffer = Bf} = State) ->
     case erltls_nif:chunk_feed_data(TlsRef, TlsData) of
         {ok, RawData} ->
-            case byte_size(RawData) of
+            Buffer = erltls_utils:get_buffer(Bf, RawData),
+
+            case byte_size(Buffer) of
                 0 ->
                     %need more data. make connection active again
                     mark_active_flag_again(TcpSocket);
                 _ ->
-                    Pid ! {ssl, SockRef, convert_data(EmOpt#emulated_opts.mode, RawData)}
+                    Pid ! {ssl, SockRef, convert_data(EmOpt#emulated_opts.mode, Buffer)}
             end;
         Error ->
             Pid ! {ssl_error, SockRef, Error}
     end,
-    {noreply, State};
+
+    case Bf of
+        <<>> ->
+            {noreply, State};
+        _ ->
+            {noreply, State#state{buffer = <<>>}}
+    end;
 
 handle_info({tcp_closed, TcpSocket}, #state{tcp = TcpSocket, owner_pid = Pid, socket_ref = SockRef} = State) ->
     Pid ! {ssl_closed, SockRef},
@@ -494,3 +527,43 @@ convert_data(binary, Data) ->
     Data;
 convert_data(list, Data) ->
     binary_to_list(Data).
+
+process_pending_data(Buffer, ExpectedLength, EmOpt) ->
+    BufferSize = byte_size(Buffer),
+
+    case ExpectedLength > BufferSize orelse BufferSize =:= 0 of
+        true ->
+            need_more;
+        _ ->
+            case ExpectedLength of
+                0 ->
+                    {ok, convert_data(EmOpt#emulated_opts.mode, Buffer), <<>>};
+                _ ->
+                    <<Chunk:ExpectedLength/binary, Rest/binary>> = Buffer,
+                    {ok, convert_data(EmOpt#emulated_opts.mode, Chunk), Rest}
+            end
+    end.
+
+set_inet_opts(_TcpSock, []) ->
+    ok;
+set_inet_opts(TcpSock, Options) ->
+    inet:setopts(TcpSock, Options).
+
+get_inet_opts(<<>>, InetOpts, _EmulatedOpts, _State) ->
+    {InetOpts, <<>>};
+get_inet_opts(Buffer, InetOpts, EmulatedOpts, State) ->
+    case erltls_utils:lookup(active, InetOpts, false) of
+        false ->
+            {InetOpts, Buffer};
+        Active ->
+            #state{socket_ref = SockRef, owner_pid = Pid } = State,
+            Pid ! {ssl, SockRef, convert_data(EmulatedOpts#emulated_opts.mode, Buffer)},
+            {[{active, pop_active_state(Active)} | erltls_utils:delete(active, InetOpts)], <<>>}
+    end.
+
+pop_active_state(once) ->
+    false;
+pop_active_state(N) when is_integer(N) ->
+    N-1;
+pop_active_state(Value) ->
+    Value.
