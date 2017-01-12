@@ -1,11 +1,16 @@
 #include "nif_utils.h"
 #include "erltls_nif.h"
+#include "macros.h"
 
 #include <string.h>
 
-// This should correspond to the similar define in erltls_nif.erl
+//disable for the moment as time benchmarks shows performances decreased with 20 - 30 %
+//will enable after more investigations
 
-#define MAX_BYTES_TO_NIF 65536
+#if defined(USE_CONSUME_TIMESLICE)
+// This should correspond to the similar define in erltls_nif.erl
+#define MAX_BYTES_TO_NIF 40960
+#endif
 
 ERL_NIF_TERM make_atom(ErlNifEnv* env, const char* name)
 {
@@ -57,10 +62,15 @@ ERL_NIF_TERM make_ok_result(ErlNifEnv* env, ERL_NIF_TERM term)
 
 void consume_timeslice(ErlNifEnv *env, size_t bytes)
 {
+#if defined(USE_CONSUME_TIMESLICE)
     int cost = static_cast<int>((bytes * 100) / MAX_BYTES_TO_NIF);
 
     if(cost)
         enif_consume_timeslice(env, cost > 100 ? 100 : cost);
+#else
+    UNUSED(env);
+    UNUSED(bytes);
+#endif
 }
 
 bool get_binary(ErlNifEnv* env, ERL_NIF_TERM term, ErlNifBinary* bin)

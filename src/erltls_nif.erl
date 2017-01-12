@@ -2,8 +2,8 @@
 -author("silviu.caragea").
 
 -define(NOT_LOADED, not_loaded(?LINE)).
-%% Maximum bytes passed to the NIF handler at once (65Kb)
--define(MAX_BYTES_TO_NIF, 65536).
+%% Maximum bytes passed to the NIF handler at once (40Kb)
+-define(MAX_BYTES_TO_NIF, 40960).
 
 -on_load(load_nif/0).
 
