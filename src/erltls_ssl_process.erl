@@ -11,6 +11,7 @@
 
 -define(SSL_SHUTDOWN_UNIDIRECTIONAL, 1).
 -define(SSL_SHUTDOWN_BIDIRECTIONAL, 2).
+-define(CONTROLLING_PROCESS_TIMEOUT_MS, 10000).
 
 -record(state, {
     tcp,
@@ -32,9 +33,6 @@
     handshake/3,
     encode_data/2,
     decode_data/2,
-    shutdown/1,
-    downgrade/3,
-    close/1,
     get_options/1,
     set_emulated_options/2,
     get_emulated_options/2,
@@ -43,7 +41,10 @@
     get_session_asn1/1,
     peercert/1,
     protocol/1,
-    session_info/1
+    session_info/1,
+    shutdown/1,
+    downgrade/3,
+    close/1
 ]).
 
 new(TcpSocket, TlsOptions, EmulatedOpts, Role) ->
@@ -62,8 +63,22 @@ new(TcpSocket, TlsOptions, EmulatedOpts, Role, CachedSession, Timeout) ->
             Error
     end.
 
+handshake(Pid, TcpSocket, Timeout) ->
+    call(Pid, {handshake, TcpSocket, Timeout}).
+
+encode_data(Pid, Data) ->
+    call(Pid, {encode_data, Data}).
+
+decode_data(Pid, Data) ->
+    call(Pid, {decode_data, Data}).
+
 get_options(Pid) ->
     call(Pid, get_options).
+
+set_emulated_options(_, []) ->
+    ok;
+set_emulated_options(Pid, Opts) ->
+    call(Pid, {set_emulated_options, Opts}).
 
 get_emulated_options(Pid, OptionNames) ->
     call(Pid, {get_emulated_options, OptionNames}).
@@ -76,21 +91,12 @@ controlling_process(Pid, Socket, NewOwner) ->
                     transfer_messages(Socket, NewOwner),
                     Pid ! {erltls_transfer_completed, Socket},
                     ok
-            after 10000 ->
+            after ?CONTROLLING_PROCESS_TIMEOUT_MS ->
                 {error, timeout}
             end;
         Error ->
             Error
     end.
-
-handshake(Pid, TcpSocket, Timeout) ->
-    call(Pid, {handshake, TcpSocket, Timeout}).
-
-encode_data(Pid, Data) ->
-    call(Pid, {encode_data, Data}).
-
-decode_data(Pid, Data) ->
-    call(Pid, {decode_data, Data}).
 
 session_reused(Pid) ->
     call(Pid, session_reused).
@@ -98,25 +104,23 @@ session_reused(Pid) ->
 get_session_asn1(Pid) ->
     call(Pid, get_session_asn1).
 
-shutdown(Pid) ->
-    call(Pid, shutdown).
-
-downgrade(Pid, NewOwner, Timeout) ->
-    call(Pid, {downgrade, NewOwner, Timeout}).
-
 peercert(Pid) ->
     call(Pid, peercert).
-
-set_emulated_options(_, []) ->
-    ok;
-set_emulated_options(Pid, Opts) ->
-    call(Pid, {set_emulated_options, Opts}).
 
 protocol(Pid) ->
     call(Pid, get_protocol).
 
 session_info(Pid) ->
     call(Pid, get_session_info).
+
+shutdown(Pid) ->
+    call(Pid, shutdown).
+
+downgrade(Pid, NewOwner, Timeout) ->
+    call(Pid, {downgrade, NewOwner, Timeout}).
+
+close(Pid) ->
+    call(Pid, close).
 
 %internals for gen_server
 
@@ -167,7 +171,7 @@ handle_call({controlling_process, SenderPid, NewOwner}, From, #state{socket_ref 
             receive
                 {erltls_transfer_completed, SocketRef} ->
                     ok
-                after 10000 ->
+                after ?CONTROLLING_PROCESS_TIMEOUT_MS ->
                     ok
             end,
 
@@ -245,8 +249,7 @@ handle_info({tcp, TcpSocket, TlsData}, #state{tcp = TcpSocket, tls_ref = TlsRef,
             case byte_size(RawData) of
                 0 ->
                     %need more data. make connection active again
-                    mark_active_flag_again(TcpSocket),
-                    {noreply, State};
+                    mark_active_flag_again(TcpSocket);
                 _ ->
                     Pid ! {ssl, SockRef, convert_data(EmOpt#emulated_opts.mode, RawData)}
             end;
@@ -303,6 +306,11 @@ call(Pid, Message) ->
 
 %internal methods
 
+mandatory_cert(?SSL_ROLE_SERVER) ->
+    true;
+mandatory_cert(?SSL_ROLE_CLIENT) ->
+    false.
+
 get_session_ticket(true) ->
     ?SESSION_TICKET_FLAG;
 get_session_ticket(_) ->
@@ -349,29 +357,6 @@ start_link(TcpSocket, TlsSock, TlsOpts, EmulatedOpts, HkCompleted) ->
             end;
         Error ->
             Error
-    end.
-
-change_active(_TcpSocket, CurrentMode, NewMode) when CurrentMode =:= NewMode ->
-    ok;
-change_active(TcpSocket, _CurrentMode, NewMode) ->
-    inet:setopts(TcpSocket, [{active, NewMode}]).
-
-transfer_messages(Sock, NewOwner) ->
-    receive
-        {ssl, Sock, Data} ->
-            NewOwner ! {ssl, Sock, Data},
-            transfer_messages(Sock, NewOwner);
-        {ssl_closed, Sock} ->
-            NewOwner ! {ssl_closed, Sock},
-            transfer_messages(Sock, NewOwner);
-        {ssl_error, Sock, Reason} ->
-            NewOwner ! {ssl_error, Sock, Reason},
-            transfer_messages(Sock, NewOwner);
-        {ssl_passive, Sock} ->
-            NewOwner ! {ssl_passive, Sock},
-            transfer_messages(Sock, NewOwner)
-    after 0 ->
-        ok
     end.
 
 do_handshake(TcpSocket, TlsSock, Timeout) ->
@@ -434,6 +419,8 @@ do_shutdown_ssl(TcpSocket, TlsRef, How, TlsAlertResponseData, Timeout) ->
                         1 ->
                             ok;
                         _ ->
+                            % waits for close alert response if needed. also make sure we read only this
+                            % record and no other tcp traffic that might follow
                             do_shutdown_ssl_continue(TcpSocket, TlsRef, How, Timeout)
                     end;
                 Error ->
@@ -442,9 +429,6 @@ do_shutdown_ssl(TcpSocket, TlsRef, How, TlsAlertResponseData, Timeout) ->
         Error ->
             Error
     end.
-
-% waits for close alert response if needed. also make sure we read only this
-% record and no other tcp traffic that might follow
 
 do_shutdown_ssl_continue(_TcpSocket, _TlsRef, ?SSL_SHUTDOWN_UNIDIRECTIONAL, _Timeout) ->
     ok;
@@ -468,6 +452,29 @@ do_shutdown_ssl_continue(TcpSocket, TlsRef, ?SSL_SHUTDOWN_BIDIRECTIONAL, Timeout
             Error
     end.
 
+transfer_messages(Sock, NewOwner) ->
+    receive
+        {ssl, Sock, Data} ->
+            NewOwner ! {ssl, Sock, Data},
+            transfer_messages(Sock, NewOwner);
+        {ssl_closed, Sock} ->
+            NewOwner ! {ssl_closed, Sock},
+            transfer_messages(Sock, NewOwner);
+        {ssl_error, Sock, Reason} ->
+            NewOwner ! {ssl_error, Sock, Reason},
+            transfer_messages(Sock, NewOwner);
+        {ssl_passive, Sock} ->
+            NewOwner ! {ssl_passive, Sock},
+            transfer_messages(Sock, NewOwner)
+    after 0 ->
+        ok
+    end.
+
+change_active(_TcpSocket, CurrentMode, NewMode) when CurrentMode =:= NewMode ->
+    ok;
+change_active(TcpSocket, _CurrentMode, NewMode) ->
+    inet:setopts(TcpSocket, [{active, NewMode}]).
+
 mark_active_flag_again(TcpSocket) ->
     case inet:getopts(TcpSocket, [active]) of
         {ok, [{active, Mode}]} ->
@@ -482,14 +489,6 @@ mark_active_flag_again(TcpSocket) ->
         Error ->
             Error
     end.
-
-close(Pid) ->
-    call(Pid, close).
-
-mandatory_cert(?SSL_ROLE_SERVER) ->
-    true;
-mandatory_cert(?SSL_ROLE_CLIENT) ->
-    false.
 
 convert_data(binary, Data) ->
     Data;
