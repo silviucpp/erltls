@@ -13,5 +13,5 @@ else
 	endif
 endif
 
-CXXFLAGS += -DNDEBUG -g -Wextra -Werror -Wno-missing-field-initializers -fno-exceptions -fno-rtti -std=c++11
+CXXFLAGS += -DNDEBUG -DUSE_INTERNAL_BUFFER=1 -g -Wextra -Werror -Wno-missing-field-initializers -fno-exceptions -fno-rtti -std=c++11
 LDFLAGS +=  -lssl -lcrypto -lstdc++
