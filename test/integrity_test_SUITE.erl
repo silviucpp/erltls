@@ -5,6 +5,8 @@
 -include_lib("public_key/include/public_key.hrl").
 -include("erltls.hrl").
 
+-behaviour(ranch_protocol).
+
 -compile(export_all).
 
 all() -> [
@@ -34,7 +36,8 @@ groups() -> [
         test_dtls_mode,
         test_certificte_keyfile_and_pwd,
         test_passive_mode,
-        test_avoid_getting_empty_packages
+        test_avoid_getting_empty_packages,
+        test_ranch
     ]}
 ].
 
@@ -652,3 +655,45 @@ recv_bytes(Socket, Size, Acc) ->
         Msg ->
             throw(Msg)
     end.
+
+
+%%%%%%%test ranch %%%%%%%%%
+
+start_link(Ref, Socket, Transport, Opts) ->
+    Pid = spawn_link(?MODULE, init, [Ref, Socket, Transport, Opts]),
+    {ok, Pid}.
+
+init(Ref, Socket, Transport, _Opts = []) ->
+    ok = ranch:accept_ack(Ref),
+    loop(Socket, Transport).
+
+loop(Socket, Transport) ->
+    case Transport:recv(Socket, 0, 5000) of
+        {ok, Data} ->
+            Transport:send(Socket, Data),
+            loop(Socket, Transport);
+        _ ->
+            ok = Transport:close(Socket)
+    end.
+
+test_ranch(_Config) ->
+    Opt = [
+        binary,
+        {packet, 0},
+        {active, false},
+        {ciphers, ["AES128-GCM-SHA256"]},
+        {verify, verify_none}
+    ],
+
+    Port = 5555,
+
+    application:ensure_all_started(ranch),
+    {ok, _} = ranch:start_listener(test, 1, ranch_erltls, [{port, Port}, {certfile, get_certificate()} | Opt], test, []),
+
+    Data = <<"HELLO WORLD">>,
+
+    {ok, CSocket} = erltls:connect("127.0.0.1", Port, Opt),
+    ok = erltls:send(CSocket, Data),
+    {ok, Data} = erltls:recv(CSocket, byte_size(Data)),
+    ok = erltls:close(CSocket),
+    true.

@@ -60,6 +60,16 @@ erltls:start(),
 ok = erltls:send(Socket, "foo"),
 ok = erltls:close(Socket).
 ```   
+
+### Using with Ranch
+    
+`erltls` can be easily used with `ranch` by starting a listener with `ranch_erltls` as the transport module:
+    
+```erlang    
+{ok, _} = ranch:start_listener(tcp_echo, 100,
+                               ranch_erltls, [{port, 5555}, {certfile, CertPath}],
+                               echo_protocol, []).
+```                                   
    
 ### Supported SSL options
 

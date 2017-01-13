@@ -13,7 +13,8 @@
     emulated_list2record/2,
     emulated_record2list/1,
     emulated_by_names/2,
-    use_session_ticket/1
+    use_session_ticket/1,
+    normalize_options/1
 ]).
 
 get_inet_names(Opt) ->
