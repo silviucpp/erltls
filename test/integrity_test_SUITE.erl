@@ -688,7 +688,7 @@ test_ranch(_Config) ->
     Port = 5555,
 
     application:ensure_all_started(ranch),
-    {ok, _} = ranch:start_listener(test, 1, ranch_erltls, [{port, Port}, {certfile, get_certificate()} | Opt], test, []),
+    {ok, _} = ranch:start_listener(integrity_test_SUITE, 1, ranch_erltls, [{port, Port}, {certfile, get_certificate()} | Opt], integrity_test_SUITE, []),
 
     Data = <<"HELLO WORLD">>,
 
