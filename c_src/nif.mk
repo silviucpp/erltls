@@ -30,16 +30,16 @@ UNAME_SYS := $(shell uname -s)
 
 ifeq ($(UNAME_SYS), Darwin)
     CC ?= cc
-	CFLAGS ?= -O3 -std=c99 -arch x86_64 -finline-functions -Wall -Wmissing-prototypes
+	CFLAGS ?= -O3 -std=c99 -arch x86_64 -finline-functions -Wall
 	CXXFLAGS ?= -O3 -arch x86_64  -Wall
-    LDFLAGS ?= -arch x86_64 -flat_namespace -undefined suppress
+    LDFLAGS ?= -arch x86_64
 else ifeq ($(UNAME_SYS),freebsd)
 	CC ?= cc
-	CFLAGS ?= -O3 -std=c99 -finline-functions -Wall -Wmissing-prototypes
+	CFLAGS ?= -O3 -std=c99 -finline-functions -Wall
 	CXXFLAGS ?= -O3 -finline-functions -Wall
 else ifeq ($(UNAME_SYS),linux)
 	CC ?= gcc
-	CFLAGS ?= -O3 -std=c99 -finline-functions -Wall -Wmissing-prototypes
+	CFLAGS ?= -O3 -std=c99 -finline-functions -Wall
 	CXXFLAGS ?= -O3 -finline-functions -Wall
 endif
 
