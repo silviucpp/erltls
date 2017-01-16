@@ -7,7 +7,7 @@ ifeq ($(USE_BORINGSSL), 1)
 	CXXFLAGS += -I$(BASEDIR)/deps/boringssl/include
 	LDFLAGS  += -L$(BASEDIR)/deps/boringssl/lib
 else
-	ifeq ($(UNAME_SYS), Darwin)
+	ifeq ($(UNAME_SYS), darwin)
 		CXXFLAGS += -I/usr/local/opt/openssl/include
 		LDFLAGS  += -L/usr/local/opt/openssl/lib
 	endif
@@ -17,7 +17,7 @@ CXXFLAGS += -DNDEBUG \
 			-DUSE_INTERNAL_BUFFER=1 \
 			-g -Wextra -Werror -Wno-missing-field-initializers -fno-exceptions -fno-rtti -std=c++11
 
-ifeq ($(UNAME_SYS), Darwin)
+ifeq ($(UNAME_SYS), darwin)
 	LDFLAGS +=  -Wl,-U,_enif_alloc \
 				-Wl,-U,_enif_free \
 				-Wl,-U,_enif_alloc_resource \
