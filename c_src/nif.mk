@@ -37,10 +37,12 @@ else ifeq ($(UNAME_SYS),freebsd)
 	CC ?= cc
 	CFLAGS ?= -O3 -std=c99 -finline-functions -Wall
 	CXXFLAGS ?= -O3 -finline-functions -Wall
+	LDFLAGS ?= -Wl,--exclude-libs=ALL
 else ifeq ($(UNAME_SYS),linux)
 	CC ?= gcc
 	CFLAGS ?= -O3 -std=c99 -finline-functions -Wall
 	CXXFLAGS ?= -O3 -finline-functions -Wall
+	LDFLAGS ?= -Wl,--exclude-libs=ALL
 endif
 
 CFLAGS += -fPIC -I $(ERTS_INCLUDE_DIR) -I $(ERL_INTERFACE_INCLUDE_DIR)
