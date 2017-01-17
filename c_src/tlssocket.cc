@@ -5,13 +5,11 @@
 #include "bytebuffer.h"
 
 #include <openssl/err.h>
+#include <memory>
 
 //http://roxlu.com/2014/042/using-openssl-with-memory-bios
 
 static const int kTlsFrameSize = 16*1024;
-#if defined(USE_INTERNAL_BUFFER)
-static const int kBufferMaxCapacity = 2*kTlsFrameSize;
-#endif
 
 void TlsSocket::SSlUserDataFree(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl, void *argp)
 {
@@ -23,13 +21,7 @@ void TlsSocket::SSlUserDataFree(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int
     enif_free(ptr);
 }
 
-TlsSocket::TlsSocket() :
-#if defined(USE_INTERNAL_BUFFER)
-    buff_(new ByteBuffer(kTlsFrameSize)),
-#endif
-    bio_read_(NULL),
-    bio_write_(NULL),
-    ssl_(NULL)
+TlsSocket::TlsSocket() : bio_read_(NULL), bio_write_(NULL), ssl_(NULL)
 {
     
 }
@@ -128,32 +120,6 @@ ERL_NIF_TERM TlsSocket::FeedData(ErlNifEnv* env, const ErlNifBinary* bin)
     if (!SSL_is_init_finished(ssl_))
         return ATOMS.atomOk;
 
-#if defined(USE_INTERNAL_BUFFER)
-    int r;
-    size_t total_writes = 0;
-
-    while((r = SSL_read(ssl_, buff_->ReserveWriteBuffer(kTlsFrameSize), kTlsFrameSize)) > 0)
-        total_writes += r;
-
-    buff_->Clear();
-
-    consume_timeslice(env, bin->size);
-
-    if(r < 0)
-    {
-        int error = SSL_get_error(ssl_, r);
-
-        if(error != SSL_ERROR_WANT_READ)
-            return make_error(env, ERR_error_string(error, NULL));
-    }
-
-    ERL_NIF_TERM return_term = make_binary(env, buff_->Data(), total_writes);
-
-    if(buff_->Capacity() > kBufferMaxCapacity)
-        buff_->Resize(kBufferMaxCapacity);
-
-    return make_ok_result(env, return_term);
-#else
     ByteBuffer buff(kTlsFrameSize);
     uint8_t buffer[kTlsFrameSize];
     int r;
@@ -172,7 +138,6 @@ ERL_NIF_TERM TlsSocket::FeedData(ErlNifEnv* env, const ErlNifBinary* bin)
     }
 
     return make_ok_result(env, make_binary(env, buff.Data(), buff.Length()));
-#endif
 }
 
 ERL_NIF_TERM TlsSocket::SendData(ErlNifEnv* env, const ErlNifBinary* bin)

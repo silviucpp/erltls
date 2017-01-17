@@ -11,10 +11,6 @@ The library is implemented in top of `gen_tcp` and `OpenSSL` API. Because `SSL_*
 that all calls for the same socket are not executed concurrently each socket has a gen_server to interact with native layer.
 This way we don't have to use any kind of locking at native level. Also read/write operations are not taking place in the
 `gen_server` process, they take place in calling process, in order to avoid gen_server to become a bottleneck for the socket. 
-
-`erltls` it's using an internal buffer by default of maximum 32KB per socket (in addition to all other buffers in `gen_tcp` or `openssl`). This
-behaviour can be disabled by changing `USE_INTERNAL_BUFFER` to 0 in `c_src/Makefile`. Using the buffer from testing improves performances with around
-10 - 15 % and also VM garbage collector it's more happy.  
    
 ### Features not available in standard Erlang ssl
 

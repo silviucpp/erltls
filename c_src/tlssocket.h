@@ -3,7 +3,6 @@
 
 #include <openssl/ssl.h>
 #include <string>
-#include <memory>
 
 #include "macros.h"
 #include "erl_nif.h"
@@ -12,10 +11,6 @@ struct ssl_user_data
 {
     ERL_NIF_TERM peer_verify_result;
 };
-
-#if defined(USE_INTERNAL_BUFFER)
-class ByteBuffer;
-#endif
 
 class SocketOwner
 {
@@ -70,9 +65,6 @@ private:
     bool ProtocolToAtom(const std::string& protocol, ERL_NIF_TERM* term);
     
     SocketOwner owner_;
-#if defined(USE_INTERNAL_BUFFER)
-    std::unique_ptr<ByteBuffer> buff_;
-#endif
     BIO* bio_read_;
     BIO* bio_write_;
     SSL* ssl_;
