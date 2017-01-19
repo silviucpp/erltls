@@ -115,7 +115,12 @@ A full handshake will be negotiated.
 - Handshake process don't have a timeout implemented yet. So in `connect/*` or `ssl_accept/*` the timeout param is actually 
   not counting the handshake process.
 
+### Benchmarks
+
+For benchmarks between different drivers see [here][5]   
+
 [1]:http://erlang.org/doc/man/ssl.html
 [2]:https://www.ietf.org/rfc/rfc5077.txt
 [3]:https://boringssl.googlesource.com/boringssl/
 [4]:https://www.openssl.org/
+[5]:https://github.com/silviucpp/tls_bench
