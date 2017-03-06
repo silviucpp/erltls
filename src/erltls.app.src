@@ -2,7 +2,7 @@
     {description, "TLS/SSL OpenSSL-based NIF for Erlang"},
     {vsn, "1.0"},
     {registered, []},
-    {applications, [kernel, stdlib, xxhash]},
+    {applications, [kernel, stdlib, crypto]},
     {mod, {erltls_app, []}},
     {env, []}
 ]}.

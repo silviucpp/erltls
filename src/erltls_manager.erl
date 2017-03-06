@@ -82,7 +82,7 @@ get_context_hash([]) ->
     <<"default">>;
 get_context_hash(Options) ->
     ValuesBin = lists:foldl(fun({_K, V}, Acc) -> [erltls_utils:to_bin(V) | Acc] end, [], lists:keysort(1, Options)),
-    xxhash:hash64(ValuesBin).
+    crypto:hash(sha, ValuesBin).
 
 missing_cert(_, false) ->
     false;
