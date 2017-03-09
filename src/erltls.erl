@@ -3,6 +3,8 @@
 
 -include("erltls.hrl").
 
+-define(DEFAULT_TIMEOUT, 5000).
+
 %% todo:
 %% 1. implement the missing methods
 %% 2. In handshake process add a timeout param (affects connect and ssl_accept methods)
@@ -81,7 +83,7 @@ clear_pem_cache() ->
     {ok, tlssocket()} | {error, reason()}.
 
 connect(Socket, TlsOpt) ->
-    connect(Socket, TlsOpt, infinity).
+    connect(Socket, TlsOpt, ?DEFAULT_TIMEOUT).
 
 -spec connect(port() | host(), [connect_option()] | inet:port_number(), timeout() | list()) ->
     {ok, tlssocket()} | {error, reason()}.
@@ -104,7 +106,7 @@ connect(Socket, TlsOpt0, Timeout) when is_port(Socket) ->
     end;
 
 connect(Host, Port, Options) ->
-    connect(Host, Port, Options, infinity).
+    connect(Host, Port, Options, ?DEFAULT_TIMEOUT).
 
 -spec connect(host(), inet:port_number(), [connect_option()], timeout()) ->
     {ok, tlssocket()} | {error, reason()}.
@@ -224,7 +226,7 @@ listen(Port, Options) ->
     {ok, tlssocket()} |{error, reason()}.
 
 transport_accept(ListenSocket) ->
-    transport_accept(ListenSocket, infinity).
+    transport_accept(ListenSocket, ?DEFAULT_TIMEOUT).
 
 -spec transport_accept(tlssocket(), timeout()) ->
     {ok, tlssocket()} | {error, reason()}.
@@ -245,7 +247,7 @@ transport_accept(#tlssocket{tcp_sock = TcpSock, ssl_pid = Pid}, Timeout) ->
 -spec ssl_accept(tlssocket()) -> ok | {error, reason()}.
 
 ssl_accept(Socket) ->
-    ssl_accept(Socket, infinity).
+    ssl_accept(Socket, ?DEFAULT_TIMEOUT).
 
 -spec ssl_accept(tlssocket() | port(), timeout()| [tls_option()]) ->
     ok | {ok, tlssocket()} | {error, reason()}.
@@ -253,7 +255,7 @@ ssl_accept(Socket) ->
 ssl_accept(#tlssocket{} = Socket, Timeout) ->
     ssl_accept(Socket, [], Timeout);
 ssl_accept(Socket, SslOptions) when is_port(Socket) ->
-    ssl_accept(Socket, SslOptions, infinity).
+    ssl_accept(Socket, SslOptions, ?DEFAULT_TIMEOUT).
 
 -spec ssl_accept(tlssocket() | port(), [tls_option()], timeout()) ->
     {ok, tlssocket()} | {error, reason()}.
