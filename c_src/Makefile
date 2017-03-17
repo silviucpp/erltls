@@ -19,6 +19,7 @@ CXXFLAGS += -DNDEBUG \
 ifeq ($(UNAME_SYS), darwin)
 	LDFLAGS +=  -Wl,-U,_enif_alloc \
 				-Wl,-U,_enif_free \
+				-Wl,-U,_enif_realloc \
 				-Wl,-U,_enif_alloc_resource \
 				-Wl,-U,_enif_open_resource_type \
 				-Wl,-U,_enif_release_resource \

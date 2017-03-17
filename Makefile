@@ -1,5 +1,9 @@
 REBAR=rebar
 
+ifndef USE_BORINGSSL
+    USE_BORINGSSL = 1
+endif
+
 get_deps:
 	@./build_deps.sh
 

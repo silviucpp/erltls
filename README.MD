@@ -20,8 +20,12 @@ This way we don't have to use any kind of locking at native level. Also read/wri
 
 ### OpenSSL fork
 
-The library is working with both [OpenSSL][4] or [BoringSSL][3]. Be default BoringSSL is used. To change the behavior modify the
-`USE_BORINGSSL` variable inside `rebar.config`.
+The library is working with both [OpenSSL][4] or [BoringSSL][3]. Be default BoringSSL is used. To change the behavior you need to specify the
+`USE_BORINGSSL` environment variable:
+
+```
+USE_BORINGSSL=0 rebar compile
+```
 
 ### User guide
 
