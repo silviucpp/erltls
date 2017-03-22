@@ -33,7 +33,7 @@ ifeq ($(UNAME_SYS), darwin)
     CC ?= cc
 	CFLAGS ?= -O3 -std=c99 -arch x86_64 -finline-functions -Wall
 	CXXFLAGS ?= -O3 -arch x86_64  -Wall
-    LDFLAGS ?= -arch x86_64 -flat_namespace
+    LDFLAGS ?= -arch x86_64
 else ifeq ($(UNAME_SYS), freebsd)
 	CC ?= cc
 	CFLAGS ?= -O3 -std=c99 -finline-functions -Wall
