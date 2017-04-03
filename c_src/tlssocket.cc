@@ -129,7 +129,7 @@ ERL_NIF_TERM TlsSocket::FeedData(ErlNifEnv* env, const ErlNifBinary* bin)
 
     consume_timeslice(env, bin->size);
 
-    if(r < 0)
+    if(r < 0 || buff.Length() == 0)
     {
         int error = SSL_get_error(ssl_, r);
 
