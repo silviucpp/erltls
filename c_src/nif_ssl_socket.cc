@@ -153,6 +153,9 @@ ERL_NIF_TERM enif_ssl_socket_send_data(ErlNifEnv* env, int argc, const ERL_NIF_T
     if(!get_binary(env, argv[1], &bin))
         return make_badarg(env);
     
+    if(bin.size == 0)
+        return make_ok_result(env, make_binary(env, NULL, 0));
+    
     return wp->socket->SendData(env, &bin);
 }
 
