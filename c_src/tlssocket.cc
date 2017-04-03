@@ -4,7 +4,6 @@
 #include "erltls_nif.h"
 #include "bytebuffer.h"
 
-#include <openssl/err.h>
 #include <memory>
 
 //http://roxlu.com/2014/042/using-openssl-with-memory-bios
@@ -96,7 +95,7 @@ ERL_NIF_TERM TlsSocket::Shutdown(ErlNifEnv* env, const ErlNifBinary* bin)
     if(ret < 0)
     {
         int error = SSL_get_error(ssl_, ret);
-        return make_error(env, ERR_error_string(error, NULL));
+        return make_error(env, enif_make_int(env, error));
     }
 
     int pending = BIO_pending(bio_write_);
@@ -134,7 +133,7 @@ ERL_NIF_TERM TlsSocket::FeedData(ErlNifEnv* env, const ErlNifBinary* bin)
         int error = SSL_get_error(ssl_, r);
 
         if(error != SSL_ERROR_WANT_READ)
-            return make_error(env, ERR_error_string(error, NULL));
+            return make_error(env, enif_make_int(env, error));
     }
 
     return make_ok_result(env, make_binary(env, buff.Data(), buff.Length()));
@@ -154,7 +153,7 @@ ERL_NIF_TERM TlsSocket::SendData(ErlNifEnv* env, const ErlNifBinary* bin)
     if(ret <= 0)
     {
         int error = SSL_get_error(ssl_, ret);
-        return make_error(env, ERR_error_string(error, NULL));
+        return make_error(env, enif_make_int(env, error));
     }
 
     return SendPending(env);
@@ -181,7 +180,7 @@ ERL_NIF_TERM TlsSocket::Handshake(ErlNifEnv* env)
         if(!enif_is_identical(data->peer_verify_result, ATOMS.atomOk))
             return make_error(env, data->peer_verify_result);
         else
-            return make_error(env, ERR_error_string(error, NULL));
+            return make_error(env, enif_make_int(env, error));
     }
     
     return ATOMS.atomOk;
