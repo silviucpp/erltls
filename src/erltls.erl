@@ -1,9 +1,6 @@
 -module(erltls).
--author("silviu.caragea").
 
 -include("erltls.hrl").
-
--define(DEFAULT_TIMEOUT, 5000).
 
 %% todo:
 %% 1. implement the missing methods

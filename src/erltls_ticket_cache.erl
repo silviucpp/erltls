@@ -1,9 +1,7 @@
 -module(erltls_ticket_cache).
--author("silviu.caragea").
 
 -define(ETS_TICKET_CACHE, etls_ticket_cache_table).
 -define(GET_KEY(Host, Port), {Host, Port}).
-
 
 -export([
     init/0,

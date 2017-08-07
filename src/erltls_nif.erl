@@ -1,5 +1,4 @@
 -module(erltls_nif).
--author("silviu.caragea").
 
 -define(NOT_LOADED, not_loaded(?LINE)).
 %% Maximum bytes passed to the NIF handler at once (40Kb)

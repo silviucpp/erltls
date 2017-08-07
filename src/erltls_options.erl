@@ -1,5 +1,4 @@
 -module(erltls_options).
--author("silviu.caragea").
 
 -include("erltls.hrl").
 

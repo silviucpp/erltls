@@ -64,3 +64,5 @@
 
 -define(CRITICAL_MSG(Format, Args),
     io:format("CRITICAL "++Format++"~n", Args)).
+
+-define(DEFAULT_TIMEOUT, 5000).

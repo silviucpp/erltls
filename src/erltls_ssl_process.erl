@@ -1,5 +1,4 @@
 -module(erltls_ssl_process).
--author("silviu.caragea").
 
 -include("erltls.hrl").
 
@@ -436,7 +435,7 @@ send_pending(TcpSocket, TlsSock) ->
     end.
 
 shutdown_ssl(TcpSocket, TlsRef) ->
-    do_shutdown_ssl(TcpSocket, TlsRef, ?SSL_SHUTDOWN_UNIDIRECTIONAL, <<>>, infinity).
+    do_shutdown_ssl(TcpSocket, TlsRef, ?SSL_SHUTDOWN_UNIDIRECTIONAL, <<>>, ?DEFAULT_TIMEOUT).
 
 downgrade_ssl(TcpSocket, TlsRef, PendingData, Timeout) ->
     do_shutdown_ssl(TcpSocket, TlsRef, ?SSL_SHUTDOWN_BIDIRECTIONAL, PendingData, Timeout).

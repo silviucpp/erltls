@@ -70,11 +70,11 @@ listen(Opts0) ->
 accept(LSocket, Timeout) ->
 	erltls:transport_accept(LSocket, Timeout).
 
--spec accept_ack(port(), [erltls:tls_option()]) ->
+-spec accept_ack(erltls:tlssocket(), timeout()) ->
     ok  | {error, erltls:reason()}.
 
-accept_ack(CSocket, Options) ->
-	case erltls:ssl_accept(CSocket, Options) of
+accept_ack(CSocket, Timeout) ->
+	case erltls:ssl_accept(CSocket, Timeout) of
 		ok ->
 			ok;
         %garbage data

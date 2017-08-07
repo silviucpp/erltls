@@ -1,5 +1,4 @@
 -module(erltls_manager).
--author("silviu.caragea").
 
 -behaviour(gen_server).
 

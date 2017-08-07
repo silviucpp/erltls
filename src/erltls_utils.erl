@@ -1,5 +1,4 @@
 -module(erltls_utils).
--author("silviu.caragea").
 
 -export([
     to_bin/1,
