@@ -40,12 +40,14 @@
     versions/0
 ]).
 
--spec start() -> ok  | {error, reason()}.
+-spec start() ->
+    ok  | {error, reason()}.
 
 start() ->
     start(temporary).
 
--spec start(permanent | transient | temporary) -> ok | {error, reason()}.
+-spec start(permanent | transient | temporary) ->
+    ok | {error, reason()}.
 
 start(Type) ->
     case application:ensure_all_started(erltls, Type) of
@@ -55,7 +57,8 @@ start(Type) ->
             Other
     end.
 
--spec stop() -> ok.
+-spec stop() ->
+    ok.
 
 stop() ->
     application:stop(erltls).
@@ -241,7 +244,8 @@ transport_accept(#tlssocket{tcp_sock = TcpSock, ssl_pid = Pid}, Timeout) ->
             Error
     end.
 
--spec ssl_accept(tlssocket()) -> ok | {error, reason()}.
+-spec ssl_accept(tlssocket()) ->
+    ok | {error, reason()}.
 
 ssl_accept(Socket) ->
     ssl_accept(Socket, ?DEFAULT_TIMEOUT).
@@ -279,7 +283,8 @@ ssl_accept(Socket, SslOptions, Timeout) when is_port(Socket) ->
             Error
     end.
 
--spec send(tlssocket(), iodata()) -> ok | {error, reason()}.
+-spec send(tlssocket(), iodata()) ->
+    ok | {error, reason()}.
 
 send(#tlssocket{ssl_pid = Pid, tcp_sock = TcpSocket}, Data) ->
     case erltls_ssl_process:encode_data(Pid, Data) of
@@ -289,12 +294,14 @@ send(#tlssocket{ssl_pid = Pid, tcp_sock = TcpSocket}, Data) ->
             Error
     end.
 
--spec recv(tlssocket(), integer()) -> {ok, binary()| list()} | {error, reason()}.
+-spec recv(tlssocket(), integer()) ->
+    {ok, binary()| list()} | {error, reason()}.
 
 recv(Socket, Length) ->
     recv(Socket, Length, infinity).
 
--spec recv(tlssocket(), integer(), timeout()) -> {ok, binary()| list()} | {error, reason()}.
+-spec recv(tlssocket(), integer(), timeout()) ->
+    {ok, binary()| list()} | {error, reason()}.
 
 recv(#tlssocket{tcp_sock = TcpSock, ssl_pid = Pid}, Length, Timeout) ->
     case erltls_ssl_process:get_pending_buffer(Pid, Length) of
@@ -339,7 +346,8 @@ close(#tlssocket{ssl_pid = Pid, tcp_sock = TcpSocket}) ->
     erltls_ssl_process:close(Pid),
     gen_tcp:close(TcpSocket).
 
--spec shutdown(tlssocket(), read | write | read_write) ->  ok | {error, reason()}.
+-spec shutdown(tlssocket(), read | write | read_write) ->
+    ok | {error, reason()}.
 
 shutdown(#tlssocket{tcp_sock = TcpSocket, ssl_pid = Pid}, How)->
     case How =:= write orelse How =:= read_write of
@@ -350,7 +358,8 @@ shutdown(#tlssocket{tcp_sock = TcpSocket, ssl_pid = Pid}, How)->
     end,
     gen_tcp:shutdown(TcpSocket, How).
 
--spec versions() -> {ok, list()}.
+-spec versions() ->
+    {ok, list()}.
 
 versions() ->
     erltls_nif:version().

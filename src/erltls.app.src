@@ -1,6 +1,6 @@
 {application, erltls, [
     {description, "TLS/SSL OpenSSL-based NIF for Erlang"},
-    {vsn, "1.2"},
+    {vsn, "1.3"},
     {registered, []},
     {applications, [kernel, stdlib, crypto]},
     {mod, {erltls_app, []}},

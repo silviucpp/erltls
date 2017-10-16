@@ -10,7 +10,7 @@ fi
 
 REPO=https://boringssl.googlesource.com/boringssl
 BRANCH=chromium-stable
-REV=68f84f5c40644e029ed066999448696b01caba7a
+REV=0e4a448ab8aa66a38593f68d19fa0a2e340833e4
 
 function fail_check
 {

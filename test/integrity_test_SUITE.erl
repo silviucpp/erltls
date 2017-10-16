@@ -1,9 +1,8 @@
 -module(integrity_test_SUITE).
--author("silviu.caragea").
 
+-include("erltls.hrl").
 -include_lib("common_test/include/ct.hrl").
 -include_lib("public_key/include/public_key.hrl").
--include("erltls.hrl").
 
 -behaviour(ranch_protocol).
 
@@ -69,7 +68,6 @@ test_options(_Config) ->
     ],
 
     {ok, [{reuseaddr, ReuseAddr}], [{certfile, CertFile}], [{packet, Packet}]} = erltls_options:get_options(Opts1),
-
     {ok, [reuseaddr], [header,packet_size,packet]} = erltls_options:get_inet_names([reuseaddr, packet, packet_size, header]),
 
     {error,{options,{packet, "ss"}}} = erltls_options:get_options([{packet, "ss"}]),

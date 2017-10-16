@@ -44,7 +44,8 @@
 name() ->
     erltls.
 
--spec secure() -> boolean().
+-spec secure() ->
+    boolean().
 
 secure() ->
     true.
