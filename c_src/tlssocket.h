@@ -34,13 +34,13 @@ public:
     static const int kFlagUseSessionTicket = 1;
 
     enum kSslRole {kSslRoleServer = 1, kSslRoleClient};
-    
+
     TlsSocket();
     ~TlsSocket();
-    
+
     bool Init(SSL_CTX* context, kSslRole role, long flags, const std::string& session_cache);
     void SetOwnerProcess(const SocketOwner& owner) {owner_ = owner;}
-    
+
     ERL_NIF_TERM Handshake(ErlNifEnv *env);
     ERL_NIF_TERM SendPending(ErlNifEnv *env);
     ERL_NIF_TERM FeedData(ErlNifEnv *env, const ErlNifBinary* bin);
@@ -58,12 +58,12 @@ public:
 private:
 
     DISALLOW_COPY_AND_ASSIGN(TlsSocket);
-    
+
     ERL_NIF_TERM SendPendingAsync(ErlNifEnv *env);
     ERL_NIF_TERM DoHandshakeOp(ErlNifEnv *env);
     ERL_NIF_TERM GetPendingData(ErlNifEnv *env, int pending);
     bool ProtocolToAtom(const std::string& protocol, ERL_NIF_TERM* term);
-    
+
     SocketOwner owner_;
     BIO* bio_read_;
     BIO* bio_write_;
@@ -71,3 +71,4 @@ private:
 };
 
 #endif
+

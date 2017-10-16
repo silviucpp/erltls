@@ -62,9 +62,9 @@ void open_resources(ErlNifEnv* env, erltls_data* data)
 int on_nif_load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
 {
     UNUSED(load_info);
-    
+
     TlsManager::InitOpenSSL();
-    
+
     ATOMS.atomOk = make_atom(env, kAtomOk);
     ATOMS.atomTrue = make_atom(env, kAtomTrue);
     ATOMS.atomFalse = make_atom(env, kAtomFalse);
@@ -107,13 +107,13 @@ int on_nif_load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     ATOMS.atomCtxVerify = make_atom(env, kAtomCtxVerify);
     ATOMS.atomCtxFailIfNoPeerCert = make_atom(env, kAtomCtxFailIfNoPeerCert);
     ATOMS.atomCtxDepth = make_atom(env, kAtomCtxDepth);
-    
+
     ATOMS.atomCompileVersion = make_atom(env, kAtomCompileVersion);
     ATOMS.atomLibVersion = make_atom(env, kAtomLibVersion);
 
     erltls_data* data = static_cast<erltls_data*>(enif_alloc(sizeof(erltls_data)));
     open_resources(env, data);
-    
+
     *priv_data = data;
     return 0;
 }
@@ -130,16 +130,16 @@ int on_nif_upgrade(ErlNifEnv* env, void** priv, void** old_priv, ERL_NIF_TERM in
 {
     UNUSED(old_priv);
     UNUSED(info);
-    
+
     erltls_data* data = static_cast<erltls_data*>(enif_alloc(sizeof(erltls_data)));
     open_resources(env, data);
-    
+
     *priv = data;
     return 0;
 }
 
 static ErlNifFunc nif_funcs[] =
-{    
+{
     {"new_context", 1, enif_ssl_new_context},
     {"ciphers", 1, enif_ciphers},
     {"ssl_new", 4, enif_ssl_socket_new},

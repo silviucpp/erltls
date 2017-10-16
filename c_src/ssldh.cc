@@ -50,11 +50,11 @@ static unsigned char dh1024_g[] = {
 int SetupDH(SSL_CTX* ctx, const std::string& dh_file)
 {
     scoped_ptr(dh, DH, NULL, DH_free);
-    
+
     if (!dh_file.empty())
     {
         scoped_ptr(bio, BIO, BIO_new_file(dh_file.c_str(), "r"), BIO_free);
-        
+
         if (bio.get())
             dh.reset(PEM_read_bio_DHparams(bio.get(), NULL, NULL, NULL));
     }
@@ -66,21 +66,21 @@ int SetupDH(SSL_CTX* ctx, const std::string& dh_file)
         {
             BIGNUM *dh_p = BN_bin2bn(dh1024_p, sizeof(dh1024_p), NULL);
             BIGNUM *dh_g = BN_bin2bn(dh1024_g, sizeof(dh1024_g), NULL);
-            
+
             if (dh_p == NULL || dh_g == NULL)
             {
                 BN_free(dh_p);
                 BN_free(dh_g);
                 return 0;
             }
-            
+
             DH_set0_pqg(dh.get(), dh_p, NULL, dh_g);
         }
     }
-    
+
     if (dh.get() == NULL)
         return 0;
-    
+
     SSL_CTX_set_options(ctx, SSL_OP_SINGLE_DH_USE);
     return static_cast<int>(SSL_CTX_set_tmp_dh(ctx, dh.get()));
 }
@@ -93,7 +93,7 @@ void SetupECDH(SSL_CTX* ctx)
     //ECDHE is enabled only on OpenSSL 1.0.0e and later
     if (SSLeay() < 0x1000005fL)
         return;
-    
+
     EC_KEY *ecdh = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
     SSL_CTX_set_options(ctx, SSL_OP_SINGLE_ECDH_USE);
     SSL_CTX_set_tmp_ecdh(ctx, ecdh);

@@ -164,12 +164,12 @@ SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
     }
 
     cb_data.release();
-    
+
     SSL_CTX_set_session_cache_mode(ctx.get(), SSL_SESS_CACHE_OFF);
-    
+
     if(props.reuse_sessions_ttl_sec)
         SSL_CTX_set_timeout(ctx.get(), props.reuse_sessions_ttl_sec);
-    
+
     if(!props.certfile.empty())
     {
         if(!SSL_CTX_use_certificate_chain_file(ctx.get(), props.certfile.c_str()))
@@ -179,7 +179,7 @@ SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
 
         if(!SSL_CTX_use_PrivateKey_file(ctx.get(), privatekey.c_str(), SSL_FILETYPE_PEM))
             return NULL;
-    
+
         if(!SSL_CTX_check_private_key(ctx.get()))
             return NULL;
 
@@ -188,17 +188,17 @@ SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
         if(props.use_session_ticket)
         {
             std::string ticket_secret_key = props.session_ticket_skey;
-            
+
             //generate random key in case none was provided
             if(ticket_secret_key.empty())
             {
                 uint8_t key[32];
                 if(RAND_bytes(key, sizeof(key)) <= 0)
                     return NULL;
-                
+
                 ticket_secret_key = std::string(reinterpret_cast<const char*>(key), sizeof(key));
             }
-            
+
             uint8_t keys[48] = {0};
 
             EVP_PKEY *pkey = SSL_CTX_get0_privatekey(ctx.get());
@@ -222,14 +222,14 @@ SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
     }
 
     ASSERT(props.ciphers.empty() == false);
-    
+
     if(!SSL_CTX_set_cipher_list(ctx.get(), props.ciphers.c_str()))
         return NULL;
-    
+
 #ifndef OPENSSL_NO_ECDH
     SetupECDH(ctx.get());
 #endif
-    
+
 #ifndef OPENSSL_NO_DH
     if(!SetupDH(ctx.get(), props.dh_file))
         return NULL;
@@ -239,11 +239,11 @@ SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
         SSL_CTX_load_verify_locations(ctx.get(), props.ca_certfile.c_str(), NULL);
     else
         SSL_CTX_set_default_verify_paths(ctx.get());
-    
+
 #ifdef SSL_MODE_RELEASE_BUFFERS
     SSL_CTX_set_mode(ctx.get(), SSL_MODE_RELEASE_BUFFERS);
 #endif
-    
+
     SSL_CTX_set_verify_depth(ctx.get(), props.verify_depth);
     SSL_CTX_set_verify(ctx.get(), GetSSLVerifyFlags(props.verify_mode, props.fail_if_no_peer_cert), VerifyCallback);
 

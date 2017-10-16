@@ -20,15 +20,15 @@ ERL_NIF_TERM parse_context_props(ErlNifEnv* env, ERL_NIF_TERM list, ContextPrope
     ERL_NIF_TERM head;
     const ERL_NIF_TERM *items;
     int arity;
-    
+
     while(enif_get_list_cell(env, list, &head, &list))
     {
         if(!enif_get_tuple(env, head, &arity, &items) || arity != 2)
             return make_bad_options(env, head);
-        
+
         ERL_NIF_TERM key = items[0];
         ERL_NIF_TERM value = items[1];
-        
+
         if(enif_is_identical(key, ATOMS.atomCtxCertfile))
         {
             if(!get_string(env, value, &props->certfile))
@@ -69,13 +69,13 @@ ERL_NIF_TERM parse_context_props(ErlNifEnv* env, ERL_NIF_TERM list, ContextPrope
             if(enif_is_tuple(env, value))
             {
                 const ERL_NIF_TERM *ticket_items;
-                
+
                 if(!enif_get_tuple(env, value, &arity, &ticket_items) || arity != 2)
                     return make_bad_options(env, head);
-                
+
                 if(!get_boolean(ticket_items[0], &props->use_session_ticket))
                     return make_bad_options(env, head);
-                
+
                 if(!get_string(env, ticket_items[1], &props->session_ticket_skey))
                     return make_bad_options(env, head);
             }
@@ -122,36 +122,36 @@ ERL_NIF_TERM parse_context_props(ErlNifEnv* env, ERL_NIF_TERM list, ContextPrope
                 return make_bad_options(env, head);
         }
     }
-    
+
     return ATOMS.atomOk;
 }
 
 ERL_NIF_TERM enif_ssl_new_context(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     UNUSED(argc);
-    
+
     erltls_data* data = static_cast<erltls_data*>(enif_priv_data(env));
-    
+
     ContextProperties props;
-    
+
     ERL_NIF_TERM parse_result = parse_context_props(env, argv[0], &props);
-    
+
     if(!enif_is_identical(parse_result, ATOMS.atomOk))
         return parse_result;
-    
+
     SSL_CTX* ctx = TlsManager::CreateContext(props);
-    
+
     if(!ctx)
         return make_error(env, kErrorFailedToCreateContext);
-    
+
     enif_ssl_ctx *nif_ctx = static_cast<enif_ssl_ctx*>(enif_alloc_resource(data->res_ssl_ctx, sizeof(enif_ssl_ctx)));
-    
+
     if(nif_ctx == NULL)
     {
         SSL_CTX_free(ctx);
         return make_error(env, kErrorFailedToAllocNifContext);
     }
-    
+
     nif_ctx->ctx = ctx;
     ERL_NIF_TERM term = enif_make_resource(env, nif_ctx);
     enif_release_resource(nif_ctx);
@@ -199,9 +199,9 @@ ERL_NIF_TERM enif_openssl_version(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
 void enif_ssl_ctx_free(ErlNifEnv* env, void* obj)
 {
     UNUSED(env);
-    
+
     enif_ssl_ctx *data = static_cast<enif_ssl_ctx*>(obj);
-    
+
     if(data->ctx != NULL)
         SSL_CTX_free(data->ctx);
 }
@@ -209,9 +209,9 @@ void enif_ssl_ctx_free(ErlNifEnv* env, void* obj)
 SSL_CTX* get_context(ErlNifEnv* env, erltls_data* data, ERL_NIF_TERM term)
 {
     enif_ssl_ctx* ctx = NULL;
-    
+
     if(!enif_get_resource(env, term, data->res_ssl_ctx, (void**) &ctx))
         return NULL;
-    
+
     return ctx->ctx;
 }

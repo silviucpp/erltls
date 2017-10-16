@@ -22,7 +22,7 @@ void TlsSocket::SSlUserDataFree(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int
 
 TlsSocket::TlsSocket() : bio_read_(NULL), bio_write_(NULL), ssl_(NULL)
 {
-    
+
 }
 
 TlsSocket::~TlsSocket()
@@ -34,25 +34,25 @@ TlsSocket::~TlsSocket()
 bool TlsSocket::Init(SSL_CTX* ctx, kSslRole role, long flags, const std::string& session_cache)
 {
     ssl_ = SSL_new(ctx);
-    
+
     bio_read_ = BIO_new(BIO_s_mem());
     bio_write_ = BIO_new(BIO_s_mem());
-    
+
     if(!bio_write_ || !bio_read_)
         return false;
-    
+
     SSL_set_bio(ssl_, bio_read_, bio_write_);
 
     uint32_t options = SSL_OP_NO_SSLv2 | SSL_OP_NO_COMPRESSION;
 
     if((flags & kFlagUseSessionTicket) == 0)
         options |= SSL_OP_NO_TICKET;
-    
+
     if(role == kSslRoleServer)
         options |= SSL_OP_ALL;
-    
+
     SSL_set_options(ssl_, options);
-    
+
     if(!session_cache.empty())
     {
         SSL_SESSION *ssl_session = NULL;
@@ -77,7 +77,7 @@ bool TlsSocket::Init(SSL_CTX* ctx, kSslRole role, long flags, const std::string&
         SSL_set_accept_state(ssl_);
     else
         SSL_set_connect_state(ssl_);
-    
+
     return true;
 }
 
@@ -163,26 +163,26 @@ ERL_NIF_TERM TlsSocket::Handshake(ErlNifEnv* env)
 {
     if(!ssl_)
         return make_error(env, ATOMS.atomSslNotStarted);
-    
+
     if(SSL_is_init_finished(ssl_))
         return make_ok_result(env, enif_make_int(env, 1));
-    
+
     int result = SSL_do_handshake(ssl_);
 
     if(result != 1)
     {
         int error = SSL_get_error(ssl_, result);
-    
+
         if(error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE)
             return make_error(env, enif_make_int(env, error));
-        
+
         ssl_user_data* data = reinterpret_cast<ssl_user_data*>(SSL_get_ex_data(ssl_, TlsManager::GetSslUserDataIndex()));
         if(!enif_is_identical(data->peer_verify_result, ATOMS.atomOk))
             return make_error(env, data->peer_verify_result);
         else
             return make_error(env, enif_make_int(env, error));
     }
-    
+
     return ATOMS.atomOk;
 }
 
@@ -190,16 +190,16 @@ ERL_NIF_TERM TlsSocket::SendPending(ErlNifEnv* env)
 {
     if(!ssl_)
         return make_error(env, ATOMS.atomSslNotStarted);
-        
+
     ERL_NIF_TERM term;
     int pending = BIO_pending(bio_write_);
-    
+
     if (!pending)
     {
         enif_make_new_binary(env, 0, &term);
         return make_ok_result(env, term);
     }
-    
+
     return make_ok_result(env, GetPendingData(env, pending));
 }
 

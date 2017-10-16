@@ -15,7 +15,7 @@
 ERL_NIF_TERM make_atom(ErlNifEnv* env, const char* name)
 {
     ERL_NIF_TERM ret;
-    
+
     if(enif_make_existing_atom(env, name, &ret, ERL_NIF_LATIN1))
         return ret;
 
@@ -84,13 +84,13 @@ bool get_binary(ErlNifEnv* env, ERL_NIF_TERM term, ErlNifBinary* bin)
 bool get_string(ErlNifEnv *env, ERL_NIF_TERM term, std::string* var)
 {
     ErlNifBinary bin;
-    
+
     if(get_binary(env, term, &bin))
     {
         *var = std::string(reinterpret_cast<const char*>(bin.data), bin.size);
         return true;
     }
-    
+
     return false;
 }
 
