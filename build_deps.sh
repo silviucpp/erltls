@@ -9,8 +9,8 @@ if [ -f "$DEPS_LOCATION/$DESTINATION/lib/libssl.a" ]; then
 fi
 
 REPO=https://boringssl.googlesource.com/boringssl
-BRANCH=chromium-stable
-REV=0e4a448ab8aa66a38593f68d19fa0a2e340833e4
+BRANCH=master
+REV=441efad4d7e97f313c7bbfc66252da6fea5c3c7a
 
 function fail_check
 {

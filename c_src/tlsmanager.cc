@@ -62,7 +62,9 @@ void TlsManager::CleanupOpenSSL()
     ERR_free_strings();
     CRYPTO_cleanup_all_ex_data();
     EVP_cleanup();
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    // venkat - hack added to comile with the latests version of boring ssl.
+    //          the and condition specifically excludes the version 0x1010007f
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && OPENSSL_VERSION_NUMBER != 0x1010007f
     OPENSSL_cleanup();
 #endif
 }

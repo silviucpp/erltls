@@ -113,7 +113,7 @@ ERL_NIF_TERM parse_context_props(ErlNifEnv* env, ERL_NIF_TERM list, ContextPrope
             else if(enif_is_identical(value, ATOMS.atomSSLMethodTLSv1))
                 props->tls_proto = TLSv1_method();
             else if(enif_is_identical(value, ATOMS.atomSSLMethodSSLv3))
-                props->tls_proto = SSLv3_method();
+                props->tls_proto = SSLv23_method();
             else if(enif_is_identical(value, ATOMS.atomSSLMethodDTLSv1_2))
                 props->tls_proto = DTLSv1_2_method();
             else if(enif_is_identical(value, ATOMS.atomSSLMethodDTLSv1))
