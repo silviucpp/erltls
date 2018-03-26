@@ -247,6 +247,9 @@ SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
     SSL_CTX_set_verify_depth(ctx.get(), props.verify_depth);
     SSL_CTX_set_verify(ctx.get(), GetSSLVerifyFlags(props.verify_mode, props.fail_if_no_peer_cert), VerifyCallback);
 
+    // venkat - enable ed25519 by default
+    SSL_CTX_set_ed25519_enabled(ctx.get(), 1);
+
     return ctx.release();
 }
 
