@@ -90,6 +90,11 @@ ERL_NIF_TERM parse_context_props(ErlNifEnv* env, ERL_NIF_TERM list, ContextPrope
             if(!get_boolean(value, &props->fail_if_no_peer_cert))
                 return make_bad_options(env, head);
         }
+	else if(enif_is_identical(key, ATOMS.atomCtxEnableEd25519))
+        {
+            if(!get_boolean(value, &props->enable_ed25519))
+                return make_bad_options(env, head);
+        }
         else if(enif_is_identical(key, ATOMS.atomCtxDepth))
         {
             if(!enif_get_int(env, value, &props->verify_depth))

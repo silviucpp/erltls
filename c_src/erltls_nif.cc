@@ -45,6 +45,7 @@ const char kAtomCtxReuseSessionsTtl[] = "reuse_sessions_ttl";
 const char kAtomCtxUseSessionTicket[] = "use_session_ticket";
 const char kAtomCtxVerify[] = "verify";
 const char kAtomCtxFailIfNoPeerCert[] = "fail_if_no_peer_cert";
+const char kAtomCtxEnableEd25519[] = "enable_ed25519";
 const char kAtomCtxDepth[] = "depth";
 
 const char kAtomCompileVersion[] = "compile_version";
@@ -106,6 +107,7 @@ int on_nif_load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
 
     ATOMS.atomCtxVerify = make_atom(env, kAtomCtxVerify);
     ATOMS.atomCtxFailIfNoPeerCert = make_atom(env, kAtomCtxFailIfNoPeerCert);
+    ATOMS.atomCtxEnableEd25519 = make_atom(env, kAtomCtxEnableEd25519);
     ATOMS.atomCtxDepth = make_atom(env, kAtomCtxDepth);
 
     ATOMS.atomCompileVersion = make_atom(env, kAtomCompileVersion);

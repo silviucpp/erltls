@@ -46,6 +46,7 @@ struct atoms
 
     ERL_NIF_TERM atomCtxVerify;
     ERL_NIF_TERM atomCtxFailIfNoPeerCert;
+    ERL_NIF_TERM atomCtxEnableEd25519;
     ERL_NIF_TERM atomCtxDepth;
 
     ERL_NIF_TERM atomCompileVersion;
