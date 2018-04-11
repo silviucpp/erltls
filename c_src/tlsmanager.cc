@@ -174,12 +174,15 @@ SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
 
     if(!props.certfile.empty())
     {
-        if(!SSL_CTX_use_certificate_chain_file(ctx.get(), props.certfile.c_str()))
+      // venkat - use SSL_CTX_use_certificate_file() to support both PEM and ASN1 fileformats
+      if(!SSL_CTX_use_certificate_file(ctx.get(), props.certfile.c_str(), SSL_FILETYPE_PEM) &&
+	 !SSL_CTX_use_certificate_file(ctx.get(), props.certfile.c_str(), SSL_FILETYPE_ASN1))
             return NULL;
 
         std::string privatekey = props.keyfile.empty() ? props.certfile : props.keyfile;
 
-        if(!SSL_CTX_use_PrivateKey_file(ctx.get(), privatekey.c_str(), SSL_FILETYPE_PEM))
+        if(!SSL_CTX_use_PrivateKey_file(ctx.get(), privatekey.c_str(), SSL_FILETYPE_PEM) &&
+	   !SSL_CTX_use_PrivateKey_file(ctx.get(), privatekey.c_str(), SSL_FILETYPE_ASN1))
             return NULL;
 
         if(!SSL_CTX_check_private_key(ctx.get()))
