@@ -249,11 +249,13 @@ SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
     SSL_CTX_set_verify_depth(ctx.get(), props.verify_depth);
     SSL_CTX_set_verify(ctx.get(), GetSSLVerifyFlags(props.verify_mode, props.fail_if_no_peer_cert), VerifyCallback);
 
-    // venkat - added property to enable/disable ed25519 curve
+    // venkat - added property to enable/disable ed25519 curve only if compiled with boringssl
+#ifdef OPENSSL_IS_BORINGSSL
     if( props.enable_ed25519 ) {
       SSL_CTX_set_ed25519_enabled(ctx.get(), 1);
     }
-
+#endif
+    
     return ctx.release();
 }
 
