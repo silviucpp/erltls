@@ -17,8 +17,11 @@ clean_nif:
 compile: ## Compile
 	${REBAR} compile
 
-clean:
+clean: clean-deps clean_nif
 	${REBAR} clean
+
+clean-deps:
+	rm -rf deps
 
 ct:
 	mkdir -p log
@@ -26,5 +29,3 @@ ct:
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
-
-
