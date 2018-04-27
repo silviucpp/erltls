@@ -48,5 +48,3 @@ ifeq ($(UNAME_SYS), darwin)
 endif
 
 LDFLAGS += -lssl -lcrypto -lstdc++
-
-g++ /code/bacnet-utils/c_src/test_nif.o /code/bacnet-utils/c_src/bacnet_utils.o  -L /usr/lib/erlang/lib/erl_interface-3.10.1/lib -lerl_interface -lei -L /code/bacnet-utils/c_src/../_build/bacnet/lib -lbacnet -o /code/bacnet-utils/c_src/../priv/bacnet_utils.so
