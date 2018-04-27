@@ -8,7 +8,7 @@ if [ -f "$DEPS_LOCATION/$DESTINATION/lib/libssl.a" ]; then
     exit 0
 fi
 
-REPO=http://dl.bintray.com/drvspw/boringssl
+REPO=http://dl.bintray.com/xaptum-eng/tar-bundles
 PKG=boringssl-441efad.tar.gz
 
 function fail_check
