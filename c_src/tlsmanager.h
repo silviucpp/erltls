@@ -25,10 +25,13 @@ struct ContextProperties
     const SSL_METHOD* tls_proto;
     std::string certfile;
     std::string keyfile;
+
     std::string password;
     std::string ciphers;
     std::string dh_file;
     std::string ca_certfile;
+    ErlNifBinary cert;
+    ErlNifBinary key;
 
     uint32_t reuse_sessions_ttl_sec;
     bool use_session_ticket;

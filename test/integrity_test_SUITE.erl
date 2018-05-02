@@ -16,6 +16,7 @@ groups() -> [
     {erltls_group, [sequence], [
         test_options,
         test_context,
+        test_context_cert,
         test_clear_pem_cache,
         test_cipher_suites,
         test_connect_complete,
@@ -33,12 +34,25 @@ groups() -> [
         downgrade_to_tcp,
         upgrade_to_tls,
         test_dtls_mode,
-        test_certificte_keyfile_and_pwd,
+        test_certificate_keyfile_and_pwd,
+        test_cert_key_and_pwd,
+        test_cert_and_pwd,
         test_passive_mode,
         test_avoid_getting_empty_packages,
         test_ranch
     ]}
 ].
+
+get_cert509()->
+    <<48,130,1,16,48,129,195,2,20,0,104,233,220,15,42,133,244,117,51,163,160,1,106,120,61,25,26,173,114,48,5,6,3,43,101,112,48,43,49,41,
+        48,39,6,3,85,4,3,12,32,52,55,49,68,52,50,48,51,54,51,53,68,65,67,52,50,68,48,65,55,66,66,66,48,51,55,53,54,54,55,48,56,48,30,23,13,49,56,48,53,48,50,48,48,48,48,48,48,90,23,13,49,57,48,53,48,50,48,48,48,48,48,48,90,48,43,49,41
+        ,48,39,6,3,85,4,3,12,32,52,55,49,68,52,50,48,51,54,51,53,68,65,67,52,50,68,48,65,55,66,66,66,48,51,55,53,54,54,55,48,56,48,42,48,5,6,3,43,101,112,3,33,0,97,203,80,156,14,181,1,201,17,25,78,98,79,98,16,98,1,50,97,117,92,0,56,81
+        ,143,243,132,89,123,133,111,230,48,5,6,3,43,101,112,3,65,0,116,230,30,240,36,0,164,95,43,201,8,122,242,45,51,196,35,118,91,100,253,104,97,83,197,153,49,128,155,138,204,117,51,112,135,109,108,78,40,205,99,102,86,31,121,177,213,
+        234,154,205,90,147,59,19,14,239,232,100,98,176,238,241,83,12>>.
+
+get_priv_key()->
+    <<167,215,236,6,150,2,108,52,250,77,216,105,214,133,236,158,45,166,40,70,57,73,34,179,87,162,10,130,204,97,193,190,97,203
+        ,80,156,14,181,1,201,17,25,78,98,79,98,16,98,1,50,97,117,92,0,56,81,143,243,132,89,123,133,111,230>>.
 
 get_certificate() ->
     <<"../../test/server.pem">>.
@@ -46,7 +60,7 @@ get_certificate() ->
 get_certfile() ->
     <<"../../test/certificate.cert">>.
 
-get_key() ->
+get_keyfile() ->
     <<"../../test/privatekey.key">>.
 
 init_per_suite(Config) ->
@@ -107,6 +121,16 @@ test_context(_Config) ->
     {ok, Ctx2} = erltls_manager:get_context([{certfile, get_certificate()}]),
     {ok, _} = erltls_manager:get_context([{certfile, get_certificate()}, {ciphers, ["AES128-GCM-SHA256"]}]),
     Ctx1 =:= Ctx2.
+
+test_context_cert(_Config)->
+    {error, missing_certificate} = erltls_manager:get_context([]),
+    Cert509 = get_cert509(),
+
+    {ok, Ctx1} = erltls_manager:get_context([{cert, Cert509}]),
+    {ok, Ctx2} = erltls_manager:get_context([{cert, Cert509}]),
+
+    Ctx1 =:= Ctx2.
+
 
 test_clear_pem_cache(_Config) ->
     {ok, Ctx1} = erltls_manager:get_context([{certfile, get_certificate()}, {ciphers, ["AES128-GCM-SHA256"]}]),
@@ -543,7 +567,31 @@ test_dtls_mode(_Config) ->
     ok = erltls:close(LSocket),
     true.
 
-test_certificte_keyfile_and_pwd(_Config) ->
+test_certifile_keyfile_and_pwd(_Config) ->
+    ServerOpt = [
+        {certfile, get_certfile()},
+        {keyfile, get_keyfile()},
+        {password, "erltls"}
+        ],
+    do_test_cert_key_and_pwd(ServerOpt).
+
+test_cert_and_pwd(_Config)->
+    ServerOpt = [
+        {cert, get_cert509()},
+        {password, "erltls"}
+    ],
+    do_test_cert_key_and_pwd(ServerOpt).
+
+test_cert_key_and_pwd(_Config)->
+    ServerOpt = [
+        {cert, get_cert509()},
+        {key, get_priv_key()},
+        {password, "erltls"}
+    ],
+    do_test_cert_key_and_pwd(ServerOpt).
+
+do_test_cert_key_and_pwd(ServerOpt)->
+
     Port = 10000,
     Opt = [
         binary,
@@ -551,12 +599,6 @@ test_certificte_keyfile_and_pwd(_Config) ->
         {active, false},
         {ciphers, ["AES128-GCM-SHA256"]},
         {verify, verify_none}
-    ],
-
-    ServerOpt = [
-        {certfile, get_certfile()},
-        {keyfile, get_key()},
-        {password, "erltls"}
     ],
 
     {ok, LSocket} = erltls:listen(Port, ServerOpt ++ Opt),

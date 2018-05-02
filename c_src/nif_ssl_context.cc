@@ -34,6 +34,11 @@ ERL_NIF_TERM parse_context_props(ErlNifEnv* env, ERL_NIF_TERM list, ContextPrope
             if(!get_string(env, value, &props->certfile))
                 return make_bad_options(env, head);
         }
+        else if(enif_is_identical(key, ATOMS.atomCtxCert)){
+
+            if(!get_binary(env, value, &props->cert))
+                return make_bad_options(env, head);
+        }
         else if(enif_is_identical(key, ATOMS.atomCtxCaCertFile))
         {
             if(!get_string(env, value, &props->ca_certfile))
@@ -42,6 +47,11 @@ ERL_NIF_TERM parse_context_props(ErlNifEnv* env, ERL_NIF_TERM list, ContextPrope
         else if(enif_is_identical(key, ATOMS.atomCtxKeyfile))
         {
             if(!get_string(env, value, &props->keyfile))
+                return make_bad_options(env, head);
+        }
+        else if(enif_is_identical(key, ATOMS.atomCtxKey))
+        {
+            if(!get_binary(env, value, &props->key))
                 return make_bad_options(env, head);
         }
         else if(enif_is_identical(key, ATOMS.atomCtxPassword))
@@ -90,7 +100,7 @@ ERL_NIF_TERM parse_context_props(ErlNifEnv* env, ERL_NIF_TERM list, ContextPrope
             if(!get_boolean(value, &props->fail_if_no_peer_cert))
                 return make_bad_options(env, head);
         }
-	else if(enif_is_identical(key, ATOMS.atomCtxEnableEd25519))
+	    else if(enif_is_identical(key, ATOMS.atomCtxEnableEd25519))
         {
             if(!get_boolean(value, &props->enable_ed25519))
                 return make_bad_options(env, head);
