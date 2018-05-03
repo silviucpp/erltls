@@ -191,7 +191,7 @@ SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
 
         }
         else if(!props.cert.empty()){
-            if(!SSL_CTX_use_certificate_ASN1(ctx.get(), props.cert.size(), (uint8_t *) props.cert.c_str()))
+            if(!SSL_CTX_use_certificate_ASN1(ctx.get(), props.cert.size(), (uint8_t *) props.cert.c_str())){
                 return NULL;
             }
 
