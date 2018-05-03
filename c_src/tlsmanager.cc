@@ -191,21 +191,24 @@ SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
 
         }
         else if(!props.cert.empty()){
-            if(!SSL_CTX_use_certificate_ASN1(ctx.get(), &(props.cert), props.cert.size())){
+            if(!SSL_CTX_use_certificate_ASN1(ctx.get(), props.cert.size(), (uint8_t *) props.cert.c_str()))
                 return NULL;
             }
 
            if(!props.key.empty()){
-                if(!SSL_CTX_use_PrivateKey(ctx.get(), (EVP_PKEY *) props.key.c_str())){
+                if(!SSL_CTX_use_PrivateKey_ASN1(EVP_PKEY_ED25519, ctx.get(), (uint8_t *) props.key.c_str(), props.key.size())){
                     return NULL;
                 }
            }
            else{
-                // TODO extract key out of cert?
-                if (!SSL_CTX_use_PrivateKey(ctx.get(), (EVP_PKEY *) props.cert.c_str())){
+                // TODO can we extract key out of cert?
+                printf("Extracting key out of cert?\n");
+                if(!SSL_CTX_use_PrivateKey_ASN1(EVP_PKEY_ED25519, ctx.get(), (uint8_t *) props.key.c_str(), props.key.size())){
                     return NULL;
                 }
            }
+
+           printf("Checking private key!\n");
 
            if(!SSL_CTX_check_private_key(ctx.get())){
                 printf("Failed private key check!\n");
