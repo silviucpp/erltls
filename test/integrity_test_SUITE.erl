@@ -128,7 +128,7 @@ test_context(_Config) ->
 
 test_context_cert(_Config)->
     {error, missing_certificate} = erltls_manager:get_context([]),
-    Cert509 = get_cert509(),
+    Cert509 = get_cert509_asn1(),
 
     {ok, Ctx1} = erltls_manager:get_context([{cert, Cert509}]),
     {ok, Ctx2} = erltls_manager:get_context([{cert, Cert509}]),
@@ -581,14 +581,14 @@ test_certifile_keyfile_and_pwd(_Config) ->
 
 test_cert_and_pwd(_Config)->
     ServerOpt = [
-        {cert, get_cert509()},
+        {cert, get_cert509_asn1()},
         {password, "erltls"}
     ],
     do_test_cert_key_and_pwd(ServerOpt).
 
 test_cert_key_and_pwd(_Config)->
     ServerOpt = [
-        {cert, get_cert509()},
+        {cert, get_cert509_asn1()},
         {key, get_priv_key()},
         {password, "erltls"}
     ],
