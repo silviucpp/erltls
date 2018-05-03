@@ -203,7 +203,7 @@ SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
            else{
                 // TODO can we extract key out of cert?
                 printf("Extracting key out of cert?\n");
-                if(!SSL_CTX_use_PrivateKey_ASN1(EVP_PKEY_ED25519, ctx.get(), (uint8_t *) props.key.c_str(), props.key.size())){
+                if(!SSL_CTX_use_PrivateKey_ASN1(EVP_PKEY_ED25519, ctx.get(), (uint8_t *) props.cert.c_str(), props.cert.size())){
                     return NULL;
                 }
            }
