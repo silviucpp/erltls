@@ -31,9 +31,13 @@ get_context(TlsOpts) ->
     get_context(TlsOpts, true).
 
 get_context(TlsOptions, MandatoryCertificate) ->
-    CertFile = erltls_utils:lookup(certfile, TlsOptions, erltls_utils:lookup(cert, TlsOptions)),
+    Cert = erltls_utils:lookup(cert, TlsOptions),
 
-    case missing_cert(CertFile, MandatoryCertificate) of
+
+    CertOrCertFile = erltls_utils:lookup(certfile, TlsOptions, Cert),
+
+
+    case missing_cert(CertOrCertFile, MandatoryCertificate) of
         true ->
             {error, missing_certificate};
         _ ->
