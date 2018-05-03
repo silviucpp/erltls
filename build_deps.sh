@@ -8,8 +8,9 @@ if [ -f "$DEPS_LOCATION/$DESTINATION/lib/libssl.a" ]; then
     exit 0
 fi
 
-REPO=http://dl.bintray.com/xaptum-eng/tar-bundles
-PKG=boringssl-441efad.tar.gz
+REPO=https://boringssl.googlesource.com/boringssl
+BRANCH=chromium-stable
+REV=0e4a448ab8aa66a38593f68d19fa0a2e340833e4
 
 function fail_check
 {
@@ -23,20 +24,17 @@ function fail_check
 
 function DownloadBoringSsl()
 {
-	echo "repo=$REPO pkg=$PKG"
+	echo "repo=$REPO rev=$REV branch=$BRANCH"
 
 	mkdir -p $DEPS_LOCATION
 	pushd $DEPS_LOCATION
 
 	if [ ! -d "$DESTINATION" ]; then
-	    mkdir -p $DESTINATION
-	fi
+	    fail_check git clone -b $BRANCH $REPO $DESTINATION
+    fi
 
 	pushd $DESTINATION
-
-	# Download the file
-	fail_check curl -sLO $REPO/$PKG
-	
+	fail_check git checkout $REV
 	popd
 	popd
 }
@@ -46,9 +44,16 @@ function BuildBoringSsl()
 	pushd $DEPS_LOCATION
 	pushd $DESTINATION
 
-	tar -zxvf $PKG
-	rm -rf $PKG
-	
+	mkdir build
+	pushd build
+
+	fail_check cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-fPIC" -DCMAKE_CXX_FLAGS="-fPIC"
+	fail_check make
+	mkdir ../lib
+	fail_check cp crypto/libcrypto.a ../lib/libcrypto.a
+	fail_check cp ssl/libssl.a ../lib/libssl.a
+
+    popd
 	popd
 	popd
 }
