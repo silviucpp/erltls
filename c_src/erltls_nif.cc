@@ -100,8 +100,8 @@ int on_nif_load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     ATOMS.atomCtxTlsProtocol = make_atom(env, kAtomCtxTlsProtocol);
     ATOMS.atomCtxCertfile = make_atom(env, kAtomCtxCertfile);
     ATOMS.atomCtxKeyfile = make_atom(env, kAtomCtxKeyfile);
-    ATOMS.atomCtxCertfile = make_atom(env, kAtomCtxCert);
-    ATOMS.atomCtxKeyfile = make_atom(env, kAtomCtxKey);
+    ATOMS.atomCtxCert = make_atom(env, kAtomCtxCert);
+    ATOMS.atomCtxKey = make_atom(env, kAtomCtxKey);
     ATOMS.atomCtxPassword = make_atom(env, kAtomCtxPassword);
     ATOMS.atomCtxDhfile = make_atom(env, kAtomCtxDhfile);
     ATOMS.atomCtxCaCertFile = make_atom(env, kAtomCtxCaCertFile);
