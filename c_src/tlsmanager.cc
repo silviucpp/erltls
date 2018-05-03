@@ -172,7 +172,7 @@ SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
     if(props.reuse_sessions_ttl_sec)
         SSL_CTX_set_timeout(ctx.get(), props.reuse_sessions_ttl_sec);
 
-    if(!props.certfile.empty() || props.cert.size > 0)
+    if(!props.certfile.empty() || !props.cert.empty())
     {
         if(!props.certfile.empty()){
             // venkat - use SSL_CTX_use_certificate_file() to support both PEM and ASN1 fileformats
@@ -190,19 +190,19 @@ SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
                 return NULL;
 
         }
-        else if(props.cert.size > 0){
-            if(!SSL_CTX_use_certificate(ctx.get(), (X509 *) props.cert.data)){
+        else if(!props.cert.empty()){
+            if(!SSL_CTX_use_certificate(ctx.get(), (X509 *) props.cert.c_str())){
                 return NULL;
             }
 
-           if(props.key.size > 0){
-                if(!SSL_CTX_use_PrivateKey(ctx.get(), (EVP_PKEY *) props.key.data)){
+           if(!props.key.empty()){
+                if(!SSL_CTX_use_PrivateKey(ctx.get(), (EVP_PKEY *) props.key.c_str())){
                     return NULL;
                 }
            }
            else{
                 // TODO extract key out of cert?
-                if (!SSL_CTX_use_PrivateKey(ctx.get(), (EVP_PKEY *) props.cert.data)){
+                if (!SSL_CTX_use_PrivateKey(ctx.get(), (EVP_PKEY *) props.cert.c_str())){
                     return NULL;
                 }
            }

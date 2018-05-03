@@ -30,8 +30,8 @@ struct ContextProperties
     std::string ciphers;
     std::string dh_file;
     std::string ca_certfile;
-    ErlNifBinary cert;
-    ErlNifBinary key;
+    std::string cert;
+    std::string key;
 
     uint32_t reuse_sessions_ttl_sec;
     bool use_session_ticket;
