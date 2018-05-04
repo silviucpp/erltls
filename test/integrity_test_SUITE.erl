@@ -35,7 +35,7 @@ groups() -> [
         downgrade_to_tcp,
         upgrade_to_tls,
         test_dtls_mode,
-        test_certificate_keyfile_and_pwd,
+        test_certfile_keyfile_and_pwd,
         test_passive_mode,
         test_avoid_getting_empty_packages,
         test_ranch
@@ -596,21 +596,21 @@ test_dtls_mode(Config) ->
     ok = erltls:close(LSocket),
     true.
 
-test_certifile_keyfile_and_pwd(Config) ->
+test_certfile_keyfile_and_pwd(Config) ->
    DataDir = ?config(data_dir, Config),
     ServerOpt = [
         {certfile, get_certfile(DataDir)},
         {keyfile, get_keyfile(DataDir)},
         {password, "erltls"}
         ],
-    do_test_cert_key_and_pwd(ServerOpt).
+    do_test_cert_key_and_pwd(ServerOpt, 10000).
 
 test_cert_and_pwd(_Config)->
     ServerOpt = [
         {cert, get_cert509_asn1()},
         {password, "erltls"}
     ],
-    do_test_cert_key_and_pwd(ServerOpt).
+    do_test_cert_key_and_pwd(ServerOpt, 10002).
 
 test_cert_key_and_pwd(_Config)->
     ServerOpt = [
@@ -618,11 +618,10 @@ test_cert_key_and_pwd(_Config)->
         {key, get_priv_key_asn1()},
         {password, "erltls"}
     ],
-    do_test_cert_key_and_pwd(ServerOpt).
+    do_test_cert_key_and_pwd(ServerOpt, 10001).
 
-do_test_cert_key_and_pwd(ServerOpt)->
+do_test_cert_key_and_pwd(ServerOpt, Port)->
 
-    Port = 10000,
     Opt = [
         binary,
         {packet, 0},
