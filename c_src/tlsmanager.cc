@@ -208,8 +208,6 @@ SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
 //                }
 //           }
 
-           printf("Checking private key!\n");
-
            if(!SSL_CTX_check_private_key(ctx.get())){
                 printf("Failed private key check!\n");
                 return NULL;

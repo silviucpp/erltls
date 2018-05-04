@@ -9,15 +9,13 @@
 -compile(export_all).
 
 all() -> [
-    {group, erltls_group}
+  {group, erltls_group_file},
+  {group, erltls_group_asn1}
 ].
 
 groups() -> [
-    {erltls_group, [sequence], [
+    {erltls_group_file, [sequence], [
         test_options,
-        %% cert and key ASN1 tests
-        test_context_cert_and_key,
-        test_cert_key_and_pwd,
         %% cerfile and keyfile tests
         test_context,
         test_clear_pem_cache,
@@ -41,7 +39,12 @@ groups() -> [
         test_passive_mode,
         test_avoid_getting_empty_packages,
         test_ranch
-    ]}
+    ]},
+  {erltls_group_asn1, [sequence], [
+    %% cert and key ASN1 tests
+    test_context_cert_and_key,
+    test_cert_key_and_pwd
+  ]}
 ].
 
 get_priv_key_asn1()->
