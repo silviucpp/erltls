@@ -70,6 +70,7 @@ get_certfile(DataDir) -> filename:join(DataDir, "certificate.cert").
 get_keyfile(DataDir) -> filename:join(DataDir, "privatekey.key").
 
 init_per_suite(Config) ->
+    application:ensure_all_started(lager),
     ok = erltls:start(),
     Config.
 
