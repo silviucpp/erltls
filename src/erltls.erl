@@ -272,14 +272,18 @@ ssl_accept(Socket, SslOptions, Timeout) when is_port(Socket) ->
                         ok ->
                             {ok, SslSocket};
                         Error ->
+                            io:format("erltls_ssl_process:handshake error ~p on socket ~p ~n", [Error, Socket]),
                             Error
                     end;
                 Error ->
+                    io:format("erltls_ssl_process:new error ~p~n", [Error]),
                     Error
             end;
         {ok, TcpOpt, _TlsOpt, EmulatedOpt} ->
+            io:format("Conflicting options error!~n"),
             {error, {options, TcpOpt ++ EmulatedOpt}};
         Error ->
+            io:format("Generic options error ~p~n", [Error]),
             Error
     end.
 
