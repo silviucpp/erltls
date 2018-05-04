@@ -43,6 +43,7 @@ groups() -> [
   {erltls_group_asn1, [sequence], [
     %% cert and key ASN1 tests
     test_context_cert_and_key,
+    test_connect_with_cert_and_key,
     upgrade_to_tls_cert_and_key,
     test_cert_key_and_pwd
   ]}
@@ -176,6 +177,26 @@ test_connect_complete(_Config) ->
     ok = erltls:close(Socket),
     false = is_process_alive(Socket#tlssocket.ssl_pid),
     true.
+
+test_connect_with_cert_and_key(_Config)->
+  {ok, Socket} = erltls:connect("google.com", 443,
+    [binary, {active, once},
+      {reuseaddr, true},
+      {packet, 0},
+      {keepalive, true},
+      {nodelay, true},
+      {verify, verify_none},
+      {fail_if_no_peer_cert, false},
+      {cert, get_cert509_asn1()},
+      {key, get_priv_key_asn1()}
+    ],5000),
+  true = is_record(Socket, tlssocket),
+  {error, _} = erltls:ssl_accept(Socket),
+  true = is_process_alive(Socket#tlssocket.ssl_pid),
+  ok = erltls:close(Socket),
+  false = is_process_alive(Socket#tlssocket.ssl_pid),
+  true.
+
 
 test_get_set_opts(_Config) ->
     DefaultOpts = [
