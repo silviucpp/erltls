@@ -33,7 +33,7 @@ groups() -> [
         test_peercert,
         test_shutdown,
         downgrade_to_tcp,
-        upgrade_to_tls,
+        upgrade_to_tls_certfile,
         test_dtls_mode,
         test_certfile_keyfile_and_pwd,
         test_passive_mode,
@@ -43,6 +43,7 @@ groups() -> [
   {erltls_group_asn1, [sequence], [
     %% cert and key ASN1 tests
     test_context_cert_and_key,
+    upgrade_to_tls_cert_and_key,
     test_cert_key_and_pwd
   ]}
 ].
@@ -52,7 +53,7 @@ get_priv_key_asn1()->
     109,67,34,144,86,38,73,88,126,38,126,107>>.
 
 get_cert509_asn1()->
-    binary_to_list(<<48,130,1,16,48,129,195,2,20,0,74,187,70,248,92,212,238,210,128,226,186,193,43,36,76,251,177,101,
+    <<48,130,1,16,48,129,195,2,20,0,74,187,70,248,92,212,238,210,128,226,186,193,43,36,76,251,177,101,
       123,48,5,6,3,43,101,112,48,43,49,41,48,39,6,3,85,4,3,12,32,54,49,57,48,65,69,51,53,54,48,53,54,51,66,54,69,66,
       56,55,48,55,48,52,53,57,54,56,56,68,66,69,68,48,30,23,13,49,56,48,53,48,51,48,48,48,48,48,48,90,23,13,49,57,48,
       53,48,51,48,48,48,48,48,48,90,48,43,49,41,48,39,6,3,85,4,3,12,32,54,49,57,48,65,69,51,53,54,48,53,54,51,66,54,
@@ -60,11 +61,7 @@ get_cert509_asn1()->
       69,239,131,53,253,11,174,197,37,116,231,222,102,197,240,83,83,209,29,110,212,185,125,112,136,108,48,5,6,3,43,101,
       112,3,65,0,7,33,146,201,205,110,89,30,184,169,20,183,167,253,179,24,251,187,5,251,29,101,163,81,12,94,175,39,81,
       214,104,65,75,106,144,184,10,10,165,196,234,199,159,39,172,79,246,95,188,55,146,84,179,28,17,59,147,236,85,
-      115,8,231,103,0>>).
-
-get_priv_key()->
-    binary_to_list(<<167,215,236,6,150,2,108,52,250,77,216,105,214,133,236,158,45,166,40,70,57,73,34,179,87,162,10,130,204,97,193,190,97,203
-        ,80,156,14,181,1,201,17,25,78,98,79,98,16,98,1,50,97,117,92,0,56,81,143,243,132,89,123,133,111,230>>).
+      115,8,231,103,0>>.
 
 get_certificate(DataDir) -> filename:join(DataDir, "server.pem").
 
@@ -511,10 +508,15 @@ downgrade_to_tcp(Config) ->
     ok = erltls:close(LSocket),
     true.
 
-upgrade_to_tls(Config) ->
+upgrade_to_tls_certfile(Config)->
   DataDir = ?config(data_dir, Config),
   CertFile = get_certificate(DataDir),
-    Port = 12000,
+  do_upgrade_to_tls(Config, [{certfile, CertFile}], 12000).
+
+upgrade_to_tls_cert_and_key(Config)->
+  do_upgrade_to_tls(Config, [{cert, get_cert509_asn1()}, {key, get_priv_key_asn1()}], 12001).
+
+do_upgrade_to_tls(_Config, CertOpt, Port) ->
     InetOpt = [
         binary,
         {exit_on_close, false},
@@ -546,7 +548,7 @@ upgrade_to_tls(Config) ->
     {ok, <<"PING">>} = gen_tcp:recv(TcpSocket, 0),
     ok = gen_tcp:send(TcpSocket, <<"PONG">>),
 
-    {ok, SslS_Sock} = erltls:ssl_accept(TcpSocket, [{certfile, CertFile} | SslOpt]),
+    {ok, SslS_Sock} = erltls:ssl_accept(TcpSocket, CertOpt ++ SslOpt),
     {ok, <<"PING">> } = erltls:recv(SslS_Sock, 0),
     ok = erltls:send(SslS_Sock, <<"PONG">>),
     ok = erltls:close(SslS_Sock),
@@ -604,13 +606,6 @@ test_certfile_keyfile_and_pwd(Config) ->
         {password, "erltls"}
         ],
     do_test_cert_key_and_pwd(ServerOpt, 10000).
-
-test_cert_and_pwd(_Config)->
-    ServerOpt = [
-        {cert, get_cert509_asn1()},
-        {password, "erltls"}
-    ],
-    do_test_cert_key_and_pwd(ServerOpt, 10002).
 
 test_cert_key_and_pwd(_Config)->
     ServerOpt = [
