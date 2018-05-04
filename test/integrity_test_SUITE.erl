@@ -16,7 +16,7 @@ all() -> [
 groups() -> [
     {erltls_group_file, [sequence], [
         test_options,
-        %% cerfile and keyfile tests
+        %% cerfile option tests
         test_context,
         test_clear_pem_cache,
         test_cipher_suites,
@@ -41,11 +41,12 @@ groups() -> [
         test_ranch
     ]},
   {erltls_group_asn1, [sequence], [
-    %% cert and key ASN1 tests
+    %% cert and key option tests
     test_context_cert_and_key,
-    test_connect_with_cert_and_key,
-    upgrade_to_tls_cert_and_key,
-    test_cert_key_and_pwd
+    test_connect_with_cert_and_key
+    %% TODO every test that has cerfile option, should now have cert/key options equivalent
+%%    upgrade_to_tls_cert_and_key,
+%%    test_cert_key_and_pwd
   ]}
 ].
 
