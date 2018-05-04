@@ -79,7 +79,7 @@ end_per_suite(_Config) ->
 test_options(Config) ->
     DataDir = ?config(data_dir, Config),
 
-    CertFile = filename:join(DataDir, get_certfile()),
+    CertFile = filename:join(DataDir, get_certfile(DataDir)),
     ReuseAddr = true,
     Packet = 0,
 
@@ -143,7 +143,7 @@ test_context_cert_and_key(_Config)->
     Ctx1 =:= Ctx2.
 
 
-test_clear_pem_cache(_Config) ->
+test_clear_pem_cache(Config) ->
     DataDir = ?config(data_dir, Config),
     CertFile = get_certificate(DataDir),
     {ok, Ctx1} = erltls_manager:get_context([{certfile, CertFile}, {ciphers, ["AES128-GCM-SHA256"]}]),
@@ -551,7 +551,7 @@ upgrade_to_tls(Config) ->
     ok = gen_tcp:close(LSocket),
     true.
 
-test_dtls_mode(_Config) ->
+test_dtls_mode(Config) ->
   DataDir = ?config(data_dir, Config),
   CertFile = get_certificate(DataDir),
     Port = 10000,
@@ -647,7 +647,7 @@ do_test_cert_key_and_pwd(ServerOpt)->
     ok = erltls:close(LSocket),
     true.
 
-test_passive_mode(_Config) ->
+test_passive_mode(Config) ->
   DataDir = ?config(data_dir, Config),
   CertFile = get_certificate(DataDir),
     Port = 10000,
@@ -684,7 +684,7 @@ test_passive_mode(_Config) ->
     ok = erltls:close(LSocket),
     true.
 
-test_avoid_getting_empty_packages(_Config) ->
+test_avoid_getting_empty_packages(Config) ->
   DataDir = ?config(data_dir, Config),
   CertFile = get_certificate(DataDir),
     Port = 10000,
@@ -697,7 +697,7 @@ test_avoid_getting_empty_packages(_Config) ->
     ],
 
     Message = <<0:20000/little-signed-integer-unit:8>>,
-    {ok, LSocket} = erltls:listen(Port, [{certfile, CerFile} | Opt]),
+    {ok, LSocket} = erltls:listen(Port, [{certfile, CertFile} | Opt]),
 
     ClientProc = fun() ->
         {ok, CSocket} = erltls:connect("127.0.0.1", Port, Opt),
@@ -747,7 +747,7 @@ loop(Socket, Transport) ->
             ok = Transport:close(Socket)
     end.
 
-test_ranch(_Config) ->
+test_ranch(Config) ->
   DataDir = ?config(data_dir, Config),
   CertFile = get_certificate(DataDir),
     Opt = [
