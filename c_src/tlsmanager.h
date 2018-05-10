@@ -17,23 +17,28 @@ struct ContextProperties
         reuse_sessions_ttl_sec(300),
         use_session_ticket(false),
         fail_if_no_peer_cert(false),
+	  enable_ed25519(true),
         verify_depth(DEFAULT_VERIFY_DEPTH),
-        verify_mode(VERIFY_NONE)
+	  verify_mode(VERIFY_NONE)
     {}
 
     const SSL_METHOD* tls_proto;
     std::string certfile;
     std::string keyfile;
+
     std::string password;
     std::string ciphers;
     std::string dh_file;
     std::string ca_certfile;
+    std::string cert;
+    std::string key;
 
     uint32_t reuse_sessions_ttl_sec;
     bool use_session_ticket;
     std::string session_ticket_skey;
 
     bool fail_if_no_peer_cert;
+    bool enable_ed25519;
     int verify_depth;
     int verify_mode;
 };

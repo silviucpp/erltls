@@ -34,6 +34,11 @@ ERL_NIF_TERM parse_context_props(ErlNifEnv* env, ERL_NIF_TERM list, ContextPrope
             if(!get_string(env, value, &props->certfile))
                 return make_bad_options(env, head);
         }
+        else if(enif_is_identical(key, ATOMS.atomCtxCert)){
+
+            if(!get_string(env, value, &props->cert))
+                return make_bad_options(env, head);
+        }
         else if(enif_is_identical(key, ATOMS.atomCtxCaCertFile))
         {
             if(!get_string(env, value, &props->ca_certfile))
@@ -42,6 +47,11 @@ ERL_NIF_TERM parse_context_props(ErlNifEnv* env, ERL_NIF_TERM list, ContextPrope
         else if(enif_is_identical(key, ATOMS.atomCtxKeyfile))
         {
             if(!get_string(env, value, &props->keyfile))
+                return make_bad_options(env, head);
+        }
+        else if(enif_is_identical(key, ATOMS.atomCtxKey))
+        {
+            if(!get_string(env, value, &props->key))
                 return make_bad_options(env, head);
         }
         else if(enif_is_identical(key, ATOMS.atomCtxPassword))
@@ -90,6 +100,11 @@ ERL_NIF_TERM parse_context_props(ErlNifEnv* env, ERL_NIF_TERM list, ContextPrope
             if(!get_boolean(value, &props->fail_if_no_peer_cert))
                 return make_bad_options(env, head);
         }
+	    else if(enif_is_identical(key, ATOMS.atomCtxEnableEd25519))
+        {
+            if(!get_boolean(value, &props->enable_ed25519))
+                return make_bad_options(env, head);
+        }
         else if(enif_is_identical(key, ATOMS.atomCtxDepth))
         {
             if(!enif_get_int(env, value, &props->verify_depth))
@@ -113,7 +128,7 @@ ERL_NIF_TERM parse_context_props(ErlNifEnv* env, ERL_NIF_TERM list, ContextPrope
             else if(enif_is_identical(value, ATOMS.atomSSLMethodTLSv1))
                 props->tls_proto = TLSv1_method();
             else if(enif_is_identical(value, ATOMS.atomSSLMethodSSLv3))
-                props->tls_proto = SSLv3_method();
+                props->tls_proto = SSLv23_method();
             else if(enif_is_identical(value, ATOMS.atomSSLMethodDTLSv1_2))
                 props->tls_proto = DTLSv1_2_method();
             else if(enif_is_identical(value, ATOMS.atomSSLMethodDTLSv1))

@@ -94,7 +94,8 @@ void SetupECDH(SSL_CTX* ctx)
     if (SSLeay() < 0x1000005fL)
         return;
 
-    EC_KEY *ecdh = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+    //EC_KEY *ecdh = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+    EC_KEY *ecdh = EC_KEY_new_by_curve_name(NID_X25519);
     SSL_CTX_set_options(ctx, SSL_OP_SINGLE_ECDH_USE);
     SSL_CTX_set_tmp_ecdh(ctx, ecdh);
     EC_KEY_free(ecdh);

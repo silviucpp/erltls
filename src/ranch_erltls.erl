@@ -80,13 +80,16 @@ accept_ack(CSocket, Timeout) ->
 			ok;
         %garbage data
         {error, invalid_tls_frame} ->
-            ok = close(CSocket),
-            exit(normal);
+          lager:error("Error in accept_ack on Socket ~p: Invalid tls frame, closing and exiting...", [CSocket]),
+          ok = close(CSocket),
+          exit(normal);
 		%% Socket most likely stopped responding, don't error out.
 		{error, Reason} when Reason =:= timeout; Reason =:= closed ->
+      lager:error("Error in accept_ack on Socket ~p: Reason ~p, closing and exiting...", [CSocket, Reason]),
 			ok = close(CSocket),
 			exit(normal);
 		{error, Reason} ->
+      lager:error("Error in accept_ack on Socket ~p: Reason ~p, closing...", [CSocket, Reason]),
 			ok = close(CSocket),
 			error(Reason)
 	end.

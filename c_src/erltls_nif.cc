@@ -36,15 +36,18 @@ const char kAtomSslCipherSuite[] = "cipher_suite";
 
 const char kAtomCtxTlsProtocol[] = "protocol";
 const char kAtomCtxCertfile[] = "certfile";
+const char kAtomCtxCert[] = "cert";
 const char kAtomCtxDhfile[] = "dhfile";
 const char kAtomCtxCaCertFile[] = "cacertfile";
 const char kAtomCtxKeyfile[] = "keyfile";
+const char kAtomCtxKey[] = "key";
 const char kAtomCtxPassword[] = "password";
 const char kAtomCtxCiphers[] = "ciphers";
 const char kAtomCtxReuseSessionsTtl[] = "reuse_sessions_ttl";
 const char kAtomCtxUseSessionTicket[] = "use_session_ticket";
 const char kAtomCtxVerify[] = "verify";
 const char kAtomCtxFailIfNoPeerCert[] = "fail_if_no_peer_cert";
+const char kAtomCtxEnableEd25519[] = "enable_ed25519";
 const char kAtomCtxDepth[] = "depth";
 
 const char kAtomCompileVersion[] = "compile_version";
@@ -97,6 +100,8 @@ int on_nif_load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     ATOMS.atomCtxTlsProtocol = make_atom(env, kAtomCtxTlsProtocol);
     ATOMS.atomCtxCertfile = make_atom(env, kAtomCtxCertfile);
     ATOMS.atomCtxKeyfile = make_atom(env, kAtomCtxKeyfile);
+    ATOMS.atomCtxCert = make_atom(env, kAtomCtxCert);
+    ATOMS.atomCtxKey = make_atom(env, kAtomCtxKey);
     ATOMS.atomCtxPassword = make_atom(env, kAtomCtxPassword);
     ATOMS.atomCtxDhfile = make_atom(env, kAtomCtxDhfile);
     ATOMS.atomCtxCaCertFile = make_atom(env, kAtomCtxCaCertFile);
@@ -106,6 +111,7 @@ int on_nif_load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
 
     ATOMS.atomCtxVerify = make_atom(env, kAtomCtxVerify);
     ATOMS.atomCtxFailIfNoPeerCert = make_atom(env, kAtomCtxFailIfNoPeerCert);
+    ATOMS.atomCtxEnableEd25519 = make_atom(env, kAtomCtxEnableEd25519);
     ATOMS.atomCtxDepth = make_atom(env, kAtomCtxDepth);
 
     ATOMS.atomCompileVersion = make_atom(env, kAtomCompileVersion);

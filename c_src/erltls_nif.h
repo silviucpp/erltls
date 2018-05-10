@@ -37,6 +37,8 @@ struct atoms
     ERL_NIF_TERM atomCtxTlsProtocol;
     ERL_NIF_TERM atomCtxCertfile;
     ERL_NIF_TERM atomCtxKeyfile;
+    ERL_NIF_TERM atomCtxCert;
+    ERL_NIF_TERM atomCtxKey;
     ERL_NIF_TERM atomCtxPassword;
     ERL_NIF_TERM atomCtxDhfile;
     ERL_NIF_TERM atomCtxCaCertFile;
@@ -46,6 +48,7 @@ struct atoms
 
     ERL_NIF_TERM atomCtxVerify;
     ERL_NIF_TERM atomCtxFailIfNoPeerCert;
+    ERL_NIF_TERM atomCtxEnableEd25519;
     ERL_NIF_TERM atomCtxDepth;
 
     ERL_NIF_TERM atomCompileVersion;

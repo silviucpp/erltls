@@ -272,14 +272,18 @@ ssl_accept(Socket, SslOptions, Timeout) when is_port(Socket) ->
                         ok ->
                             {ok, SslSocket};
                         Error ->
+                            lager:error("erltls_ssl_process:handshake error ~p on socket ~p", [Error, Socket]),
                             Error
                     end;
                 Error ->
+                    lager:error("erltls_ssl_process:new error ~p", [Error]),
                     Error
             end;
         {ok, TcpOpt, _TlsOpt, EmulatedOpt} ->
+            lager:error("Conflicting options error!"),
             {error, {options, TcpOpt ++ EmulatedOpt}};
         Error ->
+            lager:error("Generic options error ~p", [Error]),
             Error
     end.
 
