@@ -24,8 +24,8 @@ clean: clean-deps clean_nif
 clean-deps:
 	rm -rf deps
 
-ct:	compile
-	$(REBAR) ct --dir $(BASEDIR)/test --include $(BASEDIR)/include --logdir $(BASEDIR)/test/log
+test:	compile
+	$(REBAR) ct --dir $(BASEDIR)/ct --include $(BASEDIR)/include --logdir $(BASEDIR)/ct/log
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
