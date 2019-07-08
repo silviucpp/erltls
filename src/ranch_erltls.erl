@@ -7,6 +7,7 @@
     secure/0,
     messages/0,
     listen/1,
+    handshake/3,
     accept/2,
     accept_ack/2,
     connect/3,
@@ -65,11 +66,20 @@ listen(Opts0) ->
             erltls:listen(Port, apply_default_options(?DEFAULT_LISTEN_OPTS, Opts))
     end.
 
+
 -spec accept(erltls:tlssocket(), timeout()) ->
     {ok, erltls:tlssocket()} | {error, erltls:reason()}.
 
 accept(LSocket, Timeout) ->
 	erltls:transport_accept(LSocket, Timeout).
+
+-spec handshake(erltls:tlssocket(), any(), timeout()) ->
+    {ok, erltls:tlssocket()} | {error, erltls:reason()}.
+
+handshake(CSocket, _, Timeout) ->
+	ok = accept_ack(CSocket, Timeout),
+    {ok, CSocket}.
+
 
 -spec accept_ack(erltls:tlssocket(), timeout()) ->
     ok  | {error, erltls:reason()}.
