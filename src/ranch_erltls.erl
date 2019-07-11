@@ -7,16 +7,21 @@
     secure/0,
     messages/0,
     listen/1,
+    handshake/3,
     accept/2,
     accept_ack/2,
     connect/3,
     connect/4,
     recv/3,
+    recv_proxy_header/2,    
     send/2,
     sendfile/2,
     sendfile/4,
     sendfile/5,
     setopts/2,
+    getopts/2,
+    getstat/1,
+    getstat/2,
     controlling_process/2,
     peername/1,
     sockname/1,
@@ -65,11 +70,20 @@ listen(Opts0) ->
             erltls:listen(Port, apply_default_options(?DEFAULT_LISTEN_OPTS, Opts))
     end.
 
+
 -spec accept(erltls:tlssocket(), timeout()) ->
     {ok, erltls:tlssocket()} | {error, erltls:reason()}.
 
 accept(LSocket, Timeout) ->
 	erltls:transport_accept(LSocket, Timeout).
+
+-spec handshake(erltls:tlssocket(), any(), timeout()) ->
+    {ok, erltls:tlssocket()} | {error, erltls:reason()}.
+
+handshake(CSocket, _, Timeout) ->
+	ok = accept_ack(CSocket, Timeout),
+    {ok, CSocket}.
+
 
 -spec accept_ack(erltls:tlssocket(), timeout()) ->
     ok  | {error, erltls:reason()}.
@@ -110,6 +124,18 @@ connect(Host, Port, Options, Timeout) ->
 recv(Socket, Length, Timeout) ->
 	erltls:recv(Socket, Length, Timeout).
 
+-spec recv_proxy_header(ssl:sslsocket(), timeout())
+	-> {ok, ranch_proxy_header:proxy_info()}
+	| {error, closed | atom()}
+	| {error, protocol_error, atom()}.
+
+recv_proxy_header(TLSSocket, Timeout) ->
+    %% This follows the implementation in 
+    %% https://github.com/ninenines/ranch/blob/1.7.1/src/ranch_ssl.erl
+	{tlssocket, TCPSocket, _Pid} = TLSSocket,
+	ranch_tcp:recv_proxy_header(TCPSocket, Timeout).
+
+
 -spec send(erltls:tlssocket(), iodata()) ->
     ok | {error, erltls:reason()}.
 
@@ -139,6 +165,18 @@ sendfile(Socket, File, Offset, Bytes, Opts) ->
 
 setopts(Socket, Opts) ->
 	erltls:setopts(Socket, Opts).
+
+-spec getopts(ssl:sslsocket(), [atom()]) -> {ok, list()} | {error, atom()}.
+getopts(Socket, Opts) ->
+	erltls:getopts(Socket, Opts).
+
+-spec getstat(ssl:sslsocket()) -> {ok, list()} | {error, atom()}.
+getstat(Socket) ->
+	erltls:getstat(Socket).
+
+-spec getstat(ssl:sslsocket(), [atom()]) -> {ok, list()} | {error, atom()}.
+getstat(Socket, OptionNames) ->
+	erltls:getstat(Socket, OptionNames).
 
 -spec controlling_process(erltls:tlssocket(), pid()) ->
     ok | {error, erltls:reason()}.
