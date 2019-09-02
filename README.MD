@@ -17,9 +17,8 @@ that all calls for the same socket are not executed concurrently each socket has
 This way we don't have to use any kind of locking at native level. Also read/write operations are not taking place in the
 `gen_server` process, they take place in calling process, in order to avoid gen_server to become a bottleneck for the socket. 
    
-### Features not available in standard Erlang ssl
+### Features not available in standard Erlang SSL
 
-- DTLS support (both v1 and v1.2)
 - RFC5077 for resuming sessions using ticketing   
 - Can be used with both [OpenSSL][4] or [BoringSSL][3]
 
