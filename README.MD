@@ -1,5 +1,10 @@
 # erltls
 
+[![Build Status](https://travis-ci.org/silviucpp/erltls.svg?branch=master)](https://travis-ci.org/silviucpp/erltls)
+![GitHub](https://img.shields.io/github/license/silviucpp/erltls)
+![Hex.pm](https://img.shields.io/hexpm/v/erltls)
+![Maintenance](https://img.shields.io/maintenance/yes/2019)
+
 *TLS/SSL/DTLS OpenSSL/BoringSSL-based NIF library for Erlang using the same interface as erlang `ssl` module.*
       
 This module contains interface functions for the SSL/TLS protocol. 
