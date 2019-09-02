@@ -242,8 +242,11 @@ ERL_NIF_TERM TlsSocket::GetSessionASN1(ErlNifEnv *env)
 
     if (i2d_SSL_SESSION(ssl_session, &ptr) < 1)
         return make_error(env, "failed to serialize session");
-
+#ifdef OPENSSL_IS_BORINGSSL
+    ERL_NIF_TERM has_ticket = SSL_SESSION_has_ticket(ssl_session) ? ATOMS.atomTrue : ATOMS.atomFalse;
+#else
     ERL_NIF_TERM has_ticket = ssl_session->tlsext_ticklen > 0 ? ATOMS.atomTrue : ATOMS.atomFalse;
+#endif
     return enif_make_tuple3(env, ATOMS.atomOk, has_ticket, make_binary(env, session_asn1.get(), session_asn1_size));
 }
 
@@ -338,8 +341,12 @@ bool TlsSocket::ProtocolToAtom(const std::string& protocol, ERL_NIF_TERM* term)
     }
     else if(protocol == "SSLv3")
     {
+#ifndef OPENSSL_IS_BORINGSSL
         *term = ATOMS.atomSSLMethodSSLv3;
         return true;
+#else
+        return false;
+#endif
     }
     else if(protocol == "DTLSv1.2")
     {

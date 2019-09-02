@@ -31,6 +31,8 @@ The library is working with both [OpenSSL][4] or [BoringSSL][3]. Be default Bori
 USE_BORINGSSL=0 rebar compile
 ```
 
+Note: Using `sslv3` is not available into BoringSSL because it's considered unsecure.
+
 ### User guide
 
 Add `erltls` as a rebar/rebar3 dependency to your project:
