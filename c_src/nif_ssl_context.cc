@@ -5,6 +5,7 @@
 #include "macros.h"
 
 #include <memory>
+#include <vector>
 #include <string.h>
 
 static const char kErrorFailedToCreateContext[]    = "failed to create context";
@@ -177,16 +178,18 @@ ERL_NIF_TERM enif_ciphers(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         return enif_make_list(env, 0);
 
     int ciphers_count = sk_SSL_CIPHER_num(stack);
-    ERL_NIF_TERM nif_items[ciphers_count];
+
+    std::vector<ERL_NIF_TERM> nif_items;
+    nif_items.reserve(ciphers_count);
 
     for (int i = 0; i < ciphers_count; i++)
     {
         const char* cipher_name = SSL_CIPHER_get_name(sk_SSL_CIPHER_value (stack, i));
         size_t cipher_length = strlen(cipher_name);
-        nif_items[i] = make_binary(env, reinterpret_cast<const uint8_t*>(cipher_name), cipher_length);
+        nif_items.push_back(make_binary(env, reinterpret_cast<const uint8_t*>(cipher_name), cipher_length));
     }
 
-    return enif_make_list_from_array(env, nif_items, static_cast<unsigned>(ciphers_count));
+    return enif_make_list_from_array(env, nif_items.data(), nif_items.size());
 }
 
 ERL_NIF_TERM enif_openssl_version(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -210,7 +213,7 @@ SSL_CTX* get_context(ErlNifEnv* env, erltls_data* data, ERL_NIF_TERM term)
 {
     enif_ssl_ctx* ctx = NULL;
 
-    if(!enif_get_resource(env, term, data->res_ssl_ctx, (void**) &ctx))
+    if(!enif_get_resource(env, term, data->res_ssl_ctx, reinterpret_cast<void**>(&ctx)))
         return NULL;
 
     return ctx->ctx;

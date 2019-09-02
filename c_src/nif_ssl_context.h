@@ -1,5 +1,5 @@
-#ifndef ERLTLS_C_SRC_NIF_SSL_CONTEXT_H_
-#define ERLTLS_C_SRC_NIF_SSL_CONTEXT_H_
+#ifndef C_SRC_NIF_SSL_CONTEXT_H_
+#define C_SRC_NIF_SSL_CONTEXT_H_
 
 #include "erl_nif.h"
 
@@ -15,4 +15,4 @@ void enif_ssl_ctx_free(ErlNifEnv* env, void* obj);
 
 SSL_CTX* get_context(ErlNifEnv* env, erltls_data* data, ERL_NIF_TERM term);
 
-#endif
+#endif  // C_SRC_NIF_SSL_CONTEXT_H_

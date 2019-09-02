@@ -4,11 +4,11 @@
 
 #include <string.h>
 
-//disable for the moment as time benchmarks shows performances decreased with 20 - 30 %
-//will enable after more investigations
+// disable for the moment as time benchmarks shows performances decreased with 20 - 30 %
+// will enable after more investigations
 
 #if defined(USE_CONSUME_TIMESLICE)
-// This should correspond to the similar define in erltls_nif.erl
+// this should correspond to the similar define in erltls_nif.erl
 #define MAX_BYTES_TO_NIF 40960
 #endif
 

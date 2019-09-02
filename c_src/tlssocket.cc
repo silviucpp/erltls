@@ -6,7 +6,7 @@
 
 #include <memory>
 
-//http://roxlu.com/2014/042/using-openssl-with-memory-bios
+// http://roxlu.com/2014/042/using-openssl-with-memory-bios
 
 static const int kTlsFrameSize = 16*1024;
 
@@ -20,10 +20,11 @@ void TlsSocket::SSlUserDataFree(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int
     enif_free(ptr);
 }
 
-TlsSocket::TlsSocket() : bio_read_(NULL), bio_write_(NULL), ssl_(NULL)
-{
-
-}
+TlsSocket::TlsSocket() :
+    bio_read_(NULL),
+    bio_write_(NULL),
+    ssl_(NULL)
+{ }
 
 TlsSocket::~TlsSocket()
 {
@@ -83,7 +84,7 @@ bool TlsSocket::Init(SSL_CTX* ctx, kSslRole role, long flags, const std::string&
 
 ERL_NIF_TERM TlsSocket::Shutdown(ErlNifEnv* env, const ErlNifBinary* bin)
 {
-    //Avoid calling SSL_shutdown() if handshake wasn't completed.
+    // Avoid calling SSL_shutdown() if handshake wasn't completed.
     if(!ssl_ || SSL_in_init(ssl_))
         return make_ok_result(env, enif_make_int(env, 1));
 
@@ -264,7 +265,7 @@ ERL_NIF_TERM TlsSocket::GetPeerCert(ErlNifEnv *env)
     std::unique_ptr<uint8_t[]> cert_str(new uint8_t[len]);
     uint8_t* tmp = cert_str.get();
 
-    //We must use a temporary value here, since i2d_X509(X509 *x, unsigned char **out) increments *out.
+    // We must use a temporary value here, since i2d_X509(X509 *x, unsigned char **out) increments *out.
 
     if (i2d_X509(cert.get(), &tmp) < 0)
         return make_error(env, ATOMS.atomError_epeercert);
@@ -313,7 +314,7 @@ ERL_NIF_TERM TlsSocket::GetSessionInfo(ErlNifEnv* env)
 
 bool TlsSocket::ProtocolToAtom(const std::string& protocol, ERL_NIF_TERM* term)
 {
-    //from ssl/ssl_lib.c
+    // from ssl/ssl_lib.c
 
     if(protocol == "TLSv1.3")
     {

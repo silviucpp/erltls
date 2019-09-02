@@ -1,5 +1,5 @@
-#ifndef ERLTLS_C_SRC_SSLDH_H_
-#define ERLTLS_C_SRC_SSLDH_H_
+#ifndef C_SRC_SSLDH_H_
+#define C_SRC_SSLDH_H_
 
 #include <openssl/ssl.h>
 #include <string>
@@ -12,4 +12,4 @@ int SetupDH(SSL_CTX* ctx, const std::string& dh_file);
 void SetupECDH(SSL_CTX* ctx);
 #endif
 
-#endif
+#endif  // C_SRC_SSLDH_H_

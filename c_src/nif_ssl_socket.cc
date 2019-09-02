@@ -6,6 +6,7 @@
 #include "nif_utils.h"
 
 #include <memory>
+#include <string>
 
 static const char kErrorFailedToAllocNifSocket[] = "failed to alloc enif_ssl_socket";
 static const char kErrorFailedToAllocSslSocket[] = "failed to alloc ssl socket";
@@ -72,7 +73,7 @@ ERL_NIF_TERM enif_ssl_socket_set_owner(ErlNifEnv* env, int argc, const ERL_NIF_T
     enif_ssl_socket* wp = NULL;
     ErlNifPid pid;
 
-    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, (void**) &wp))
+    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, reinterpret_cast<void**>(&wp)))
         return make_badarg(env);
 
     if(!enif_get_local_pid(env, argv[1], &pid))
@@ -100,7 +101,7 @@ ERL_NIF_TERM enif_ssl_socket_handshake(ErlNifEnv* env, int argc, const ERL_NIF_T
 
     enif_ssl_socket* wp = NULL;
 
-    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, (void**) &wp))
+    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, reinterpret_cast<void**>(&wp)))
         return make_badarg(env);
 
     return wp->socket->Handshake(env);
@@ -114,7 +115,7 @@ ERL_NIF_TERM enif_ssl_socket_send_pending(ErlNifEnv* env, int argc, const ERL_NI
 
     enif_ssl_socket* wp = NULL;
 
-    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, (void**) &wp))
+    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, reinterpret_cast<void**>(&wp)))
         return make_badarg(env);
 
     return wp->socket->SendPending(env);
@@ -129,7 +130,7 @@ ERL_NIF_TERM enif_ssl_socket_feed_data(ErlNifEnv* env, int argc, const ERL_NIF_T
     enif_ssl_socket* wp = NULL;
     ErlNifBinary bin;
 
-    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, (void**) &wp))
+    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, reinterpret_cast<void**>(&wp)))
         return make_badarg(env);
 
     if(!get_binary(env, argv[1], &bin))
@@ -147,7 +148,7 @@ ERL_NIF_TERM enif_ssl_socket_send_data(ErlNifEnv* env, int argc, const ERL_NIF_T
     enif_ssl_socket* wp = NULL;
     ErlNifBinary bin;
 
-    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, (void**) &wp))
+    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, reinterpret_cast<void**>(&wp)))
         return make_badarg(env);
 
     if(!get_binary(env, argv[1], &bin))
@@ -167,7 +168,7 @@ ERL_NIF_TERM enif_ssl_socket_get_session_ans1(ErlNifEnv* env, int argc, const ER
 
     enif_ssl_socket* wp = NULL;
 
-    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, (void**) &wp))
+    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, reinterpret_cast<void**>(&wp)))
         return make_badarg(env);
 
     return wp->socket->GetSessionASN1(env);
@@ -181,7 +182,7 @@ ERL_NIF_TERM enif_ssl_socket_session_reused(ErlNifEnv* env, int argc, const ERL_
 
     enif_ssl_socket* wp = NULL;
 
-    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, (void**) &wp))
+    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, reinterpret_cast<void**>(&wp)))
         return make_badarg(env);
 
     return wp->socket->IsSessionReused(env);
@@ -195,7 +196,7 @@ ERL_NIF_TERM enif_ssl_socket_peercert(ErlNifEnv* env, int argc, const ERL_NIF_TE
 
     enif_ssl_socket* wp = NULL;
 
-    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, (void**) &wp))
+    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, reinterpret_cast<void**>(&wp)))
         return make_badarg(env);
 
     return wp->socket->GetPeerCert(env);
@@ -209,7 +210,7 @@ ERL_NIF_TERM enif_ssl_socket_get_method(ErlNifEnv* env, int argc, const ERL_NIF_
 
     enif_ssl_socket* wp = NULL;
 
-    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, (void**) &wp))
+    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, reinterpret_cast<void**>(&wp)))
         return make_badarg(env);
 
     return wp->socket->GetSslMethod(env);
@@ -223,7 +224,7 @@ ERL_NIF_TERM enif_ssl_socket_get_session_info(ErlNifEnv* env, int argc, const ER
 
     enif_ssl_socket* wp = NULL;
 
-    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, (void**) &wp))
+    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, reinterpret_cast<void**>(&wp)))
         return make_badarg(env);
 
     return wp->socket->GetSessionInfo(env);
@@ -237,7 +238,7 @@ ERL_NIF_TERM enif_ssl_socket_shutdown(ErlNifEnv* env, int argc, const ERL_NIF_TE
     enif_ssl_socket* wp = NULL;
     ErlNifBinary bin;
 
-    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, (void**) &wp))
+    if(!enif_get_resource(env, argv[0], data->res_ssl_sock, reinterpret_cast<void**>(&wp)))
         return make_badarg(env);
 
     if(!get_binary(env, argv[1], &bin))

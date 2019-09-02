@@ -183,13 +183,13 @@ SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
         if(!SSL_CTX_check_private_key(ctx.get()))
             return NULL;
 
-        //sessing ticketing make sense only in case private key was set
+        // sessing ticketing make sense only in case private key was set
 
         if(props.use_session_ticket)
         {
             std::string ticket_secret_key = props.session_ticket_skey;
 
-            //generate random key in case none was provided
+            // generate random key in case none was provided
             if(ticket_secret_key.empty())
             {
                 uint8_t key[32];

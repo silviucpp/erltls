@@ -1,5 +1,5 @@
-#ifndef ERLTLS_C_SRC_TLSSOCKET_H_
-#define ERLTLS_C_SRC_TLSSOCKET_H_
+#ifndef C_SRC_TLSSOCKET_H_
+#define C_SRC_TLSSOCKET_H_
 
 #include <openssl/ssl.h>
 #include <string>
@@ -57,8 +57,6 @@ public:
 
 private:
 
-    DISALLOW_COPY_AND_ASSIGN(TlsSocket);
-
     ERL_NIF_TERM SendPendingAsync(ErlNifEnv *env);
     ERL_NIF_TERM DoHandshakeOp(ErlNifEnv *env);
     ERL_NIF_TERM GetPendingData(ErlNifEnv *env, int pending);
@@ -68,7 +66,8 @@ private:
     BIO* bio_read_;
     BIO* bio_write_;
     SSL* ssl_;
+
+    DISALLOW_COPY_AND_ASSIGN(TlsSocket);
 };
 
-#endif
-
+#endif  // C_SRC_TLSSOCKET_H_

@@ -1,5 +1,5 @@
-#ifndef ERLTLS_C_SRC_MACROS_H_
-#define ERLTLS_C_SRC_MACROS_H_
+#ifndef C_SRC_MACROS_H_
+#define C_SRC_MACROS_H_
 
 #define UNUSED(expr) do { (void)(expr); } while (0)
 
@@ -16,4 +16,4 @@
 #define ASSERT(x) assert(x)
 #endif
 
-#endif
+#endif  // C_SRC_MACROS_H_

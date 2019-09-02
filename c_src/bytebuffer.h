@@ -1,5 +1,5 @@
-#ifndef ERLTLS_C_SRC_BYTEBUFFER_H_
-#define ERLTLS_C_SRC_BYTEBUFFER_H_
+#ifndef C_SRC_BYTEBUFFER_H_
+#define C_SRC_BYTEBUFFER_H_
 
 #include "macros.h"
 
@@ -11,7 +11,7 @@ class ByteBuffer
 
 public:
 
-    ByteBuffer(size_t size);
+    explicit ByteBuffer(size_t size);
     ByteBuffer(const uint8_t* bytes, size_t len);
 
     ~ByteBuffer();
@@ -30,14 +30,14 @@ public:
 
 private:
 
-	DISALLOW_COPY_AND_ASSIGN(ByteBuffer);
-
     void Construct(const uint8_t* bytes, size_t size);
 
     uint8_t* bytes_;
     size_t size_;
     size_t start_;
     size_t end_;
+
+    DISALLOW_COPY_AND_ASSIGN(ByteBuffer);
 };
 
-#endif
+#endif  // C_SRC_BYTEBUFFER_H_

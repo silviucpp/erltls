@@ -90,7 +90,7 @@ int SetupDH(SSL_CTX* ctx, const std::string& dh_file)
 #ifndef OPENSSL_NO_ECDH
 void SetupECDH(SSL_CTX* ctx)
 {
-    //ECDHE is enabled only on OpenSSL 1.0.0e and later
+    // ECDHE is enabled only on OpenSSL 1.0.0e and later
     if (SSLeay() < 0x1000005fL)
         return;
 

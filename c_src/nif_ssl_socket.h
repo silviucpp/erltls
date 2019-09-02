@@ -1,5 +1,5 @@
-#ifndef ERLTLS_C_SRC_NIF_SSL_SOCKET_H_
-#define ERLTLS_C_SRC_NIF_SSL_SOCKET_H_
+#ifndef C_SRC_NIF_SSL_SOCKET_H_
+#define C_SRC_NIF_SSL_SOCKET_H_
 
 #include "erl_nif.h"
 
@@ -17,4 +17,4 @@ ERL_NIF_TERM enif_ssl_socket_get_method(ErlNifEnv* env, int argc, const ERL_NIF_
 ERL_NIF_TERM enif_ssl_socket_get_session_info(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 void enif_ssl_socket_free(ErlNifEnv* env, void* obj);
 
-#endif
+#endif  // C_SRC_NIF_SSL_SOCKET_H_

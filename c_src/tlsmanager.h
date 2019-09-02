@@ -1,5 +1,5 @@
-#ifndef ERLTLS_C_SRC_TLSMANAGER_H_
-#define ERLTLS_C_SRC_TLSMANAGER_H_
+#ifndef C_SRC_TLSMANAGER_H_
+#define C_SRC_TLSMANAGER_H_
 
 #include <openssl/ssl.h>
 #include <string>
@@ -59,4 +59,4 @@ private:
     DISALLOW_IMPLICIT_CONSTRUCTORS(TlsManager);
 };
 
-#endif
+#endif  // C_SRC_TLSMANAGER_H_

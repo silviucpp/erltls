@@ -1,5 +1,5 @@
-#ifndef ERLTLS_C_SRC_ERLTLS_NIF_H_
-#define ERLTLS_C_SRC_ERLTLS_NIF_H_
+#ifndef C_SRC_ERLTLS_NIF_H_
+#define C_SRC_ERLTLS_NIF_H_
 
 #include "erl_nif.h"
 
@@ -50,7 +50,6 @@ struct atoms
 
     ERL_NIF_TERM atomCompileVersion;
     ERL_NIF_TERM atomLibVersion;
-
 };
 
 struct erltls_data
@@ -61,4 +60,4 @@ struct erltls_data
 
 extern atoms ATOMS;
 
-#endif
+#endif  // C_SRC_ERLTLS_NIF_H_

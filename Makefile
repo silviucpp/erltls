@@ -53,7 +53,7 @@ ct:
 			-logdir log
 
 cpplint:
-	cpplint --counting=detailed --filter=-legal/copyright,-build/include_subdir,-build/include_order,-whitespace/braces,-whitespace/parens,-whitespace/newline \
+	cpplint --counting=detailed --filter=-legal/copyright,-build/include_subdir,-build/include_order,-whitespace/braces,-whitespace/parens,-whitespace/newline,-whitespace/indent,-whitespace/blank_line \
 			--linelength=300 \
 			--exclude=c_src/*.o --exclude=c_src/*.mk  \
 			c_src/*.*
