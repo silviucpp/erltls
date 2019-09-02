@@ -29,7 +29,7 @@ USE_BORINGSSL=0 rebar compile
 
 ### User guide
 
-Add `erltls` as a rebar dependency to your project:
+Add `erltls` as a rebar/rebar3 dependency to your project:
 
 ```
 {deps, [

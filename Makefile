@@ -1,4 +1,5 @@
-REBAR=rebar
+REBAR=rebar3
+ROOT_TEST=_build/test/lib
 
 ifndef USE_BORINGSSL
     USE_BORINGSSL = 1
@@ -25,6 +26,9 @@ clean:
 
 ct:
 	mkdir -p log
-	ct_run -suite integrity_test_SUITE -pa ebin -pa deps/*/ebin -include include -logdir log
-
-
+	${REBAR} ct --compile_only
+	ct_run  -no_auto_compile \
+			-cover test/cover.spec \
+			-dir $(ROOT_TEST)/erltls/test \
+			-pa $(ROOT_TEST)/*/ebin \
+			-logdir log
