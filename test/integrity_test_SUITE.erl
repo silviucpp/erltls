@@ -23,7 +23,7 @@ groups() -> [
         test_get_set_opts,
         test_handshake_failed,
         test_owner_died,
-        %test_owner_change,
+        test_owner_change,
         test_send_recv,
         test_active_mode,
         test_list_mode,
@@ -149,7 +149,7 @@ test_get_set_opts(_Config) ->
         {verify, verify_none}
     ],
 
-    {ok, Socket} = erltls:connect("status.github.com", 443, DefaultOpts),
+    {ok, Socket} = erltls:connect("raw.githubusercontent.com", 443, DefaultOpts),
     false = erltls:session_reused(Socket),
     ok = erltls:setopts(Socket, [list, {active, 0}, {packet, 2}]),
     {error,{options,{packet, "ss"}}} = erltls:setopts(Socket, [list, {active, 0}, {packet, "ss"}]),
@@ -202,7 +202,6 @@ test_owner_died(_Config) ->
     true.
 
 test_owner_change(_Config) ->
-	%todo: fix this
     process_flag(trap_exit, true),
 
     Opt = [
@@ -211,8 +210,8 @@ test_owner_change(_Config) ->
         {active, true}
     ],
 
-    Request = <<"GET /api/status.json?callback=apiStatus HTTP/1.1\r\nHost: status.github.com\r\nConnection: close\r\n\r\n">>,
-    {ok, Socket} = erltls:connect("status.github.com", 443, Opt),
+    Request = <<"GET /silviucpp/erltls/master/README.MD HTTP/1.1\r\nHost: raw.githubusercontent.com\r\nConnection: close\r\n\r\n">>,
+    {ok, Socket} = erltls:connect("raw.githubusercontent.com", 443, Opt),
     ok = erltls:send(Socket, Request),
 
     Fun = fun() ->
@@ -224,11 +223,12 @@ test_owner_change(_Config) ->
 
     receive
         {ssl, Socket, Data} ->
+            true = is_process_alive(Socket#tlssocket.ssl_pid),
             self() ! {ssl, Socket, Data}
     end,
 
     Pid = spawn_link(Fun),
-    ok = erltls:controlling_process(Socket, Pid),
+    ?assertEqual(ok, erltls:controlling_process(Socket, Pid)),
 
     receive
         {'EXIT',Pid, _} ->
@@ -251,9 +251,9 @@ test_send_recv(_Config) ->
         {verify, verify_none}
     ],
 
-    Request = <<"GET /api/status.json?callback=apiStatus HTTP/1.1\r\nHost: status.github.com\r\nCache-Control: no-cache\r\n\r\n">>,
+    Request = <<"GET /silviucpp/erltls/master/README.MD HTTP/1.1\r\nHost: raw.githubusercontent.com\r\nConnection: close\r\n\r\n">>,
+    {ok, Socket} = erltls:connect("raw.githubusercontent.com", 443, Opt),
 
-    {ok, Socket} = erltls:connect("status.github.com", 443, Opt),
     ok = erltls:send(Socket, Request),
     case erltls:recv(Socket, 0) of
         {ok, <<"HTTP/", _Rest/binary>>} ->
@@ -278,16 +278,21 @@ test_active_mode(_Config) ->
         {verify, verify_none}
     ],
 
-    Request = <<"GET /api/status.json?callback=apiStatus HTTP/1.1\r\nHost: status.github.com\r\nConnection: close\r\n\r\n">>,
-    {ok, Socket} = erltls:connect("status.github.com", 443, Opt),
+    Request = <<"GET /silviucpp/erltls/master/README.MD HTTP/1.1\r\nHost: raw.githubusercontent.com\r\nConnection: close\r\n\r\n">>,
+    {ok, Socket} = erltls:connect("raw.githubusercontent.com", 443, Opt),
     ok = erltls:send(Socket, Request),
 
-    receive
-        {ssl, Socket, <<"HTTP/", _Rest/binary>>} ->
-            ok;
-        Msg ->
-            throw(Msg)
+    FunRecv = fun(F) ->
+        receive
+            {ssl, Socket, <<"HTTP/", _Rest/binary>>} ->
+                ok;
+            {ssl_passive, Socket} ->
+                F(F);
+            Msg ->
+                ?assert(Msg)
+        end
     end,
+    ok = FunRecv(FunRecv),
     ok = erltls:close(Socket),
     true.
 
@@ -299,16 +304,22 @@ test_list_mode(_Config) ->
         {verify, verify_none}
     ],
 
-    Request = <<"GET /api/status.json?callback=apiStatus HTTP/1.1\r\nHost: status.github.com\r\nConnection: close\r\n\r\n">>,
-    {ok, Socket} = erltls:connect("status.github.com", 443, Opt),
+    Request = <<"GET /silviucpp/erltls/master/README.MD HTTP/1.1\r\nHost: raw.githubusercontent.com\r\nConnection: close\r\n\r\n">>,
+    {ok, Socket} = erltls:connect("raw.githubusercontent.com", 443, Opt),
     ok = erltls:send(Socket, Request),
 
-    receive
-        {ssl, Socket, [$H, $T, $T, $P | _Tail]} ->
-            ok;
-        Msg ->
-            throw(Msg)
+    FunRecv = fun(F) ->
+        receive
+            {ssl, Socket, [$H, $T, $T, $P | _Tail]} ->
+                ok;
+            {ssl_passive, Socket} ->
+                F(F);
+            Msg ->
+                ?assert(Msg)
+        end
     end,
+    ok = FunRecv(FunRecv),
+
     ok = erltls:close(Socket),
     true.
 
@@ -332,7 +343,7 @@ test_server_mode(_Config) ->
             {ssl, CSocket, <<"HELLO">>} ->
                 ok = erltls:close(CSocket);
             Msg ->
-                throw(Msg)
+                ?assert(Msg)
         end
     end,
 

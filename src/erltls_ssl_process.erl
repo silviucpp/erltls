@@ -273,7 +273,7 @@ handle_info({tcp, TcpSocket, TlsData}, #state{tcp = TcpSocket, tls_ref = TlsRef,
             case byte_size(Buffer) of
                 0 ->
                     %need more data. make connection active again
-                    mark_active_flag_again(TcpSocket);
+                    ok = mark_active_flag_again(TcpSocket);
                 _ ->
                     Pid ! {ssl, SockRef, convert_data(EmOpt#emulated_opts.mode, Buffer)}
             end;
