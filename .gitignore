@@ -9,3 +9,4 @@
 /deps/
 /DerivedData/
 /_build/
+/cppcheck_results.xml

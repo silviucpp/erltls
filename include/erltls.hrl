@@ -1,9 +1,19 @@
--author("silviu.caragea").
 
-%socket ref
+% records
 
--record(tlssocket, {tcp_sock, ssl_pid}).
--record(emulated_opts, {packet =0, packet_size = 0, header = 0, mode = list}).
+-record(tlssocket, {
+    tcp_sock,
+    ssl_pid
+}).
+
+-record(emulated_opts, {
+    packet =0,
+    packet_size = 0,
+    header = 0,
+    mode = list
+}).
+
+% types
 
 -type tls_option()::
     {verify, verify_type()} |
@@ -32,7 +42,7 @@
 -type verify_type()              :: verify_none | verify_peer.
 -type protocol()                 :: sslv3 | tlsv1 | 'tlsv1.1' | 'tlsv1.2' | dtlsv1 | 'dtlsv1.2'.
 
-%ssl stuffs
+% ssl defines
 
 -define(SSL_ROLE_SERVER, 1).
 -define(SSL_ROLE_CLIENT, 2).
@@ -45,7 +55,7 @@
 -define(SSL_RECORD_HANDSHAKE, 22).
 -define(SSL_RECORD_APP_DATA, 23).
 
-%logs
+% logs
 
 -define(PRINT_MSG(Format, Args),
     io:format("PRINT "++Format++"~n", Args)).
@@ -64,5 +74,7 @@
 
 -define(CRITICAL_MSG(Format, Args),
     io:format("CRITICAL "++Format++"~n", Args)).
+
+% others
 
 -define(DEFAULT_TIMEOUT, 5000).

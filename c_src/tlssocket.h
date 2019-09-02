@@ -16,8 +16,8 @@ class SocketOwner
 {
 public:
 
-    SocketOwner() : is_set_(false) {}
-    SocketOwner(const ErlNifPid& p) : is_set_(true), pid_(p) {}
+    SocketOwner() : is_set_(false), pid_{0} {}
+    explicit SocketOwner(const ErlNifPid& p) : is_set_(true), pid_(p) {}
 
     bool is_set() const { return is_set_;}
     const ErlNifPid& pid() const { return pid_;}
