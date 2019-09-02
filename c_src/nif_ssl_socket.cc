@@ -28,8 +28,8 @@ ERL_NIF_TERM enif_ssl_socket_new(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
 
     erltls_data* data = static_cast<erltls_data*>(enif_priv_data(env));
 
-    int role;
-    long flags;
+    int32_t role;
+    uint32_t flags;
     std::string session_cache;
     SSL_CTX* ctx = get_context(env, data, argv[0]);
 
@@ -39,7 +39,7 @@ ERL_NIF_TERM enif_ssl_socket_new(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
     if(!enif_get_int(env, argv[1], &role))
         return make_badarg(env);
 
-    if(!enif_get_long(env, argv[2], &flags))
+    if(!enif_get_uint(env, argv[2], &flags))
         return make_badarg(env);
 
     if(!get_string(env, argv[3], &session_cache))

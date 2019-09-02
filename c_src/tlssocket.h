@@ -38,7 +38,7 @@ public:
     TlsSocket();
     ~TlsSocket();
 
-    bool Init(SSL_CTX* context, kSslRole role, long flags, const std::string& session_cache);
+    bool Init(SSL_CTX* context, kSslRole role, uint32_t flags, const std::string& session_cache);
     void SetOwnerProcess(const SocketOwner& owner) {owner_ = owner;}
 
     ERL_NIF_TERM Handshake(ErlNifEnv *env);

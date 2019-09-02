@@ -32,7 +32,7 @@ TlsSocket::~TlsSocket()
         SSL_free(ssl_);
 }
 
-bool TlsSocket::Init(SSL_CTX* ctx, kSslRole role, long flags, const std::string& session_cache)
+bool TlsSocket::Init(SSL_CTX* ctx, kSslRole role, uint32_t flags, const std::string& session_cache)
 {
     ssl_ = SSL_new(ctx);
 
