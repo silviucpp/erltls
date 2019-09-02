@@ -216,8 +216,8 @@ test_owner_change(_Config) ->
 
     Fun = fun() ->
         receive
-            {ssl, Sock, _Data} ->
-                true = is_process_alive(Sock#tlssocket.ssl_pid)
+            {ssl, _Sock, _Data} ->
+                ok
         end
     end,
 
