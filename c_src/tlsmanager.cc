@@ -9,6 +9,7 @@
 #include <openssl/err.h>
 #include <memory>
 #include <string.h>
+#include <algorithm>
 
 struct callback_data
 {
@@ -155,9 +156,10 @@ SSL_CTX* TlsManager::CreateContext(const ContextProperties& props)
 
     if(!props.password.empty())
     {
-        cb_data->password = reinterpret_cast<char*>(enif_alloc(props.password.length() + 1));
-        cb_data->password_length = static_cast<int>(props.password.length());
-        strcpy(cb_data->password, props.password.c_str());
+        cb_data->password = reinterpret_cast<char*>(enif_alloc(props.password.size() + 1));
+        cb_data->password_length = static_cast<int>(props.password.size());
+        std::copy(props.password.begin(), props.password.end(), cb_data->password);
+        cb_data->password[props.password.size()] = '\0';
 
         SSL_CTX_set_default_passwd_cb(ctx.get(), PasswdCallback);
         SSL_CTX_set_default_passwd_cb_userdata(ctx.get(), cb_data.get());
