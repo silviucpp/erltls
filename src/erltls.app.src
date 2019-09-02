@@ -2,7 +2,7 @@
     {description, "TLS/SSL OpenSSL-based NIF for Erlang"},
     {licenses, ["MIT"]},
     {links,[{"Github","https://github.com/silviucpp/erltls"}]},
-    {vsn, "1.4.0"},
+    {vsn, "1.4.1"},
     {registered, []},
     {applications, [
         kernel,
