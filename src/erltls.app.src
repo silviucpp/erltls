@@ -2,7 +2,7 @@
     {description, "TLS/SSL OpenSSL-based NIF for Erlang"},
     {licenses, ["MIT"]},
     {links,[{"Github","https://github.com/silviucpp/erltls"}]},
-    {vsn, "1.4.1"},
+    {vsn, "1.4.2"},
     {registered, []},
     {applications, [
         kernel,
@@ -20,6 +20,7 @@
         "rebar.lock",
         "include/*.hrl",
         "src/*.erl",
+        "src/*.src",
         "c_src/*.h",
         "c_src/*.cc",
         "c_src/Makefile",
