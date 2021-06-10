@@ -1,6 +1,6 @@
 # erltls
 
-[![Build Status](https://travis-ci.org/silviucpp/erltls.svg?branch=master)](https://travis-ci.org/silviucpp/erltls)
+[![Build Status](https://travis-ci.com/silviucpp/erltls.svg?branch=master)](https://travis-ci.com/silviucpp/erltls)
 ![GitHub](https://img.shields.io/github/license/silviucpp/erltls)
 ![Hex.pm](https://img.shields.io/hexpm/v/erltls)
 
